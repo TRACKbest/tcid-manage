@@ -245,15 +245,18 @@ class LiveClassroomWebSocketTests(TransactionTestCase):
 		self.teacher_token = teacher_join.data['token']
 		self.student_token = student_join.data['token']
 
+	@override_settings(ALLOWED_HOSTS=['testserver'])
 	def test_websocket_relays_hands_moderation_and_peer_signals(self):
 		async def exercise_room():
 			teacher_socket = WebsocketCommunicator(
 				application,
 				f'/ws/live-classrooms/{self.classroom.pk}/?{urlencode({"token": self.teacher_token})}',
+				headers=[(b'origin', b'http://testserver')],
 			)
 			student_socket = WebsocketCommunicator(
 				application,
 				f'/ws/live-classrooms/{self.classroom.pk}/?{urlencode({"token": self.student_token})}',
+				headers=[(b'origin', b'http://testserver')],
 			)
 			teacher_connected, teacher_close_code = await teacher_socket.connect(timeout=5)
 			self.assertTrue(teacher_connected, f'WebSocket rejected with close code {teacher_close_code}')
