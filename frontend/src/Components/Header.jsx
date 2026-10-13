@@ -156,7 +156,7 @@ const Header = () => {
                     }
                     </div>
                 </div>
-                <a className="nav-link nav-item" href="http://127.0.0.1:8000/admin/" target="_blank" rel="noreferrer"><i className="bi bi-lock-fill" aria-hidden="true"></i>Administration</a>
+                <a className="nav-link nav-item" href="/admin/" target="_blank" rel="noreferrer"><i className="bi bi-lock-fill" aria-hidden="true"></i>Administration</a>
             </div>
         </div>
     </nav> 

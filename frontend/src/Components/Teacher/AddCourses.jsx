@@ -126,7 +126,7 @@ const AddCourses = () => {
                             {cats.length === 0 && <option value="">Aucune catégorie disponible</option>}
                             {cats.map((category,index)=>{return <option key={index} value={category.id}>{category.title}</option>})}
                         </select>
-                        {cats.length === 0 && <a href="http://127.0.0.1:8000/admin/main/coursecategory/add/" target="_blank" rel="noreferrer">Ajouter une catégorie dans l’administration</a>}
+                        {cats.length === 0 && <a href="/admin/" target="_blank" rel="noreferrer">Ajouter une catégorie dans l’administration</a>}
                     </div>
                     <div className="mb-3">
                         <label for="exampleInputPassword1" className="form-label">Titre</label>
