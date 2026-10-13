@@ -1,4 +1,4 @@
-# CI/CD and VPS deployment
+# CI/CD and VPS deployment code
 
 The workflow at `.github/workflows/ci-cd.yml` runs Django integration tests
 against PostgreSQL, React tests and a production build, and Docker image builds
