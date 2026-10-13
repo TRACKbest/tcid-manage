@@ -136,6 +136,7 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_DOMAIN: ${{ secrets.VPS_DOMAIN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           OPENAI_MAX_TOKENS: ${{ secrets.OPENAI_MAX_TOKENS }}
@@ -145,11 +146,15 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           password: ${{ secrets.VPS_PASSWORD }}
           fingerprint: ${{ secrets.VPS_FINGERPRINT }}
-          envs: GITHUB_SHA,VPS_HOST,OPENAI_API_KEY,OPENAI_MODEL,OPENAI_MAX_TOKENS
+          envs: GITHUB_SHA,VPS_HOST,VPS_DOMAIN,OPENAI_API_KEY,OPENAI_MODEL,OPENAI_MAX_TOKENS
           script: |
             set -eu
             DEPLOY_ROOT=/var/www/tcid-manage
             RELEASE="$DEPLOY_ROOT/releases/$GITHUB_SHA"
+            [ -n "${VPS_DOMAIN:-}" ] || {
+              echo "Le secret GitHub VPS_DOMAIN doit contenir le domaine de production." >&2
+              exit 1
+            }
             mkdir -p "$RELEASE"
             tar -xzf "$RELEASE/deploy.tar.gz" -C "$RELEASE"
 
@@ -165,11 +170,9 @@ jobs:
             }
             ensure_env DJANGO_SECRET_KEY "$(openssl rand -hex 48)"
             ensure_env DJANGO_DEBUG False
-            ensure_env DJANGO_ALLOWED_HOSTS "$VPS_HOST,localhost,127.0.0.1"
             ensure_env POSTGRES_DB tcid
             ensure_env POSTGRES_USER tcid
             ensure_env POSTGRES_PASSWORD "$(openssl rand -hex 32)"
-            ensure_env REACT_FRONTEND_ORIGINS "http://$VPS_HOST,https://$VPS_HOST"
             ensure_env REACT_ADMIN_URL /admin
 
             update_env() {
@@ -179,6 +182,9 @@ jobs:
               sed -i "/^${name}=/d" "$DEPLOY_ROOT/.env"
               printf '%s=%s\n' "$name" "$value" >> "$DEPLOY_ROOT/.env"
             }
+            update_env VPS_DOMAIN "$VPS_DOMAIN"
+            update_env DJANGO_ALLOWED_HOSTS "$VPS_HOST,$VPS_DOMAIN,www.$VPS_DOMAIN,localhost,127.0.0.1"
+            update_env REACT_FRONTEND_ORIGINS "http://$VPS_HOST,https://$VPS_HOST,https://$VPS_DOMAIN,https://www.$VPS_DOMAIN"
             update_env OPENAI_API_KEY "${OPENAI_API_KEY:-}"
             update_env OPENAI_MODEL "${OPENAI_MODEL:-}"
             update_env OPENAI_MAX_TOKENS "${OPENAI_MAX_TOKENS:-}"
@@ -189,7 +195,7 @@ jobs:
             docker compose -p tcid-manage config --quiet
             docker compose -p tcid-manage up --build --detach --remove-orphans
 
-            for service in backend frontend; do
+            for service in backend frontend caddy; do
               container_id="$(docker compose -p tcid-manage ps -q "$service")"
               [ -n "$container_id" ] || {
                 echo "Container manquant pour le service $service" >&2
