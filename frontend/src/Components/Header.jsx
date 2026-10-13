@@ -28,7 +28,14 @@ const Header = () => {
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState([])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [openAccountMenu, setOpenAccountMenu] = useState('')
   const unreadCount = notifications.filter(notification => !notification.is_read).length
+
+  const closeMenu = () => {
+    setMenuOpen(false)
+    setOpenAccountMenu('')
+  }
   
   useEffect(() => {
     if (!recipientType || !recipientId) {
@@ -83,12 +90,13 @@ const Header = () => {
       ))
     }
     setNotificationsOpen(false)
+    closeMenu()
     navigate(notification.link)
   }
 
   return (
     <>
-    <nav class="navbar navbar-expand-lg bg-white navbar-light shadow sticky-top p-0">
+    <nav className="navbar navbar-expand-lg bg-white navbar-light shadow sticky-top p-0">
         <Link to="/" className="navbar-brand d-flex align-items-center px-4 px-lg-5">
           <img
             src="/tcid-center-logo.png"
@@ -99,14 +107,21 @@ const Header = () => {
           />
           <h2 className="m-0">TCiD Center</h2>
         </Link>
-        <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-            <span class="navbar-toggler-icon"></span>
+        <button
+          type="button"
+          className="navbar-toggler me-4"
+          aria-label={menuOpen ? 'Fermer le menu de navigation' : 'Ouvrir le menu de navigation'}
+          aria-expanded={menuOpen}
+          aria-controls="navbarCollapse"
+          onClick={() => setMenuOpen(open => !open)}
+        >
+            <span className="navbar-toggler-icon"></span>
         </button>
-        <div class="collapse navbar-collapse" id="navbarCollapse">
-            <div class="navbar-nav ms-auto p-4 p-lg-0">
-                <Link to="/" className="nav-item nav-link"><i className="bi bi-house-door" aria-hidden="true"></i>Accueil</Link>
-                <Link to="/category" className="nav-item nav-link"><i className="bi bi-grid" aria-hidden="true"></i>Catégories</Link>
-                <Link to="/all-courses" className="nav-item nav-link"><i className="bi bi-book" aria-hidden="true"></i>Cours</Link>
+        <div className={`collapse navbar-collapse${menuOpen ? ' show' : ''}`} id="navbarCollapse">
+            <div className="navbar-nav ms-auto p-4 p-lg-0">
+                <Link to="/" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-house-door" aria-hidden="true"></i>Accueil</Link>
+                <Link to="/category" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-grid" aria-hidden="true"></i>Catégories</Link>
+                <Link to="/all-courses" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-book" aria-hidden="true"></i>Cours</Link>
                 {recipientType && recipientId && <div className="nav-item dropdown">
                   <button type="button" className="nav-link btn border-0 d-flex align-items-center gap-2" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} non lues` : 'Notifications'} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}>
                     <i className="bi bi-bell" aria-hidden="true"></i>
@@ -122,41 +137,41 @@ const Header = () => {
                     </button>)}
                   </div>}
                 </div>}
-                <div class="nav-item dropdown">
-                    <button type="button" className="nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i className="bi bi-person-badge" aria-hidden="true"></i>Enseignant</button>
-                    <div class="dropdown-menu fade-down m-0">
+                <div className="nav-item dropdown">
+                    <button type="button" className="nav-link dropdown-toggle" aria-expanded={openAccountMenu === 'teacher'} onClick={() => setOpenAccountMenu(openAccountMenu === 'teacher' ? '' : 'teacher')}><i className="bi bi-person-badge" aria-hidden="true"></i>Enseignant</button>
+                    <div className={`dropdown-menu fade-down m-0${openAccountMenu === 'teacher' ? ' show' : ''}`}>
                     {teacherLoginStatus !== 'true' && 
                     <>
-                      <li><Link className="dropdown-item" to="/teacher-login"><i className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Connexion</Link></li>
-                      <li><Link className="dropdown-item" to="/teacher-register"><i className="bi bi-person-plus me-2" aria-hidden="true"></i>Inscription</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/teacher-login"><i className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Connexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/teacher-register"><i className="bi bi-person-plus me-2" aria-hidden="true"></i>Inscription</Link></li>
                     </>
                     }
                     {teacherLoginStatus ==='true' && 
                     <>
-                      <li><Link className="dropdown-item" to="/teacher-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
-                      <li><Link className="dropdown-item" to="/teacher-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/teacher-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/teacher-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
                     </>
                     }
                     </div>
                 </div>
-                <div class="nav-item dropdown">
-                    <button type="button" className="nav-link dropdown-toggle ps-0 px-5" data-bs-toggle="dropdown" aria-expanded="false"><i className="bi bi-mortarboard" aria-hidden="true"></i>Étudiant</button>
-                    <div class="dropdown-menu fade-down m-0">
+                <div className="nav-item dropdown">
+                    <button type="button" className="nav-link dropdown-toggle ps-0 px-5" aria-expanded={openAccountMenu === 'student'} onClick={() => setOpenAccountMenu(openAccountMenu === 'student' ? '' : 'student')}><i className="bi bi-mortarboard" aria-hidden="true"></i>Étudiant</button>
+                    <div className={`dropdown-menu fade-down m-0${openAccountMenu === 'student' ? ' show' : ''}`}>
                     {studentLoginStatus !== 'true' && 
                     <>
-                      <li><Link className="dropdown-item" to="/user-login"><i className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Connexion</Link></li>
-                      <li><Link className="dropdown-item" to="/user-register"><i className="bi bi-person-plus me-2" aria-hidden="true"></i>Inscription</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/user-login"><i className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Connexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/user-register"><i className="bi bi-person-plus me-2" aria-hidden="true"></i>Inscription</Link></li>
                     </>
                     }
                     {studentLoginStatus === 'true' &&
                     <>
-                      <li><Link className="dropdown-item" to="/user-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
-                      <li><Link className="dropdown-item" to="/user-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/user-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/user-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
                     </>
                     }
                     </div>
                 </div>
-                <a className="nav-link nav-item" href="/admin/" target="_blank" rel="noreferrer"><i className="bi bi-lock-fill" aria-hidden="true"></i>Administration</a>
+                <a className="nav-link nav-item" href="/admin/" target="_blank" rel="noreferrer" onClick={closeMenu}><i className="bi bi-lock-fill" aria-hidden="true"></i>Administration</a>
             </div>
         </div>
     </nav> 
