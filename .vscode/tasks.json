@@ -1,0 +1,375 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Check OpenAI and PDF dependencies",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"-m",
+				"pip",
+				"show",
+				"openai",
+				"pypdf",
+				"python-dotenv"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Install AI dependencies into WSL venv",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"-m",
+				"pip",
+				"install",
+				"-r",
+				"requirements.txt"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Validate local OpenAI env loading",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"check",
+				"--database",
+				"default"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check AI data migration consistency",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"makemigrations",
+				"--check",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Validate AI Django integrations",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"check",
+				"--database",
+				"default"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check AI model migration graph",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"makemigrations",
+				"--check",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Apply AI database migration",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"migrate",
+				"--noinput"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Test AI feature APIs without OpenAI calls",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"test",
+				"main.tests.AIFeatureApiTests",
+				"--verbosity",
+				"2"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run AI feature tests",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"test",
+				"main.tests.AIFeatureApiTests",
+				"--verbosity",
+				"1"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build AI student and teacher UI",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"frontend",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Create anonymized analytics migration",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"makemigrations",
+				"main"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Apply anonymized analytics migration",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"migrate",
+				"--noinput"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build final AI frontend",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"--prefix",
+				"frontend",
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run AI and classroom regression suite",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"test",
+				"main.tests.AIFeatureApiTests",
+				"main.tests.CourseEngagementTests",
+				"main.tests.LiveClassroomApiTests",
+				"main.tests.LiveClassroomWebSocketTests",
+				"--verbosity",
+				"1"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Verify final AI dependency health",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"-m",
+				"pip",
+				"check"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Verify AI migration state",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"makemigrations",
+				"--check",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect WSL Django listener",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--exec",
+				"/usr/bin/ss",
+				"-ltnp"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Confirm Django port 8000 listener",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--exec",
+				"/usr/bin/ss",
+				"-ltnp"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect Django runserver process in WSL",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--exec",
+				"/usr/bin/ps",
+				"-ef"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Inspect Django launch modes",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--exec",
+				"/usr/bin/ps",
+				"-p",
+				"3334,3353,3377",
+				"-o",
+				"pid,stat,etime,args"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Validate final AI settings",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"check",
+				"--database",
+				"default"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Verify final AI dependency set",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"-m",
+				"pip",
+				"check"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Verify final AI migration state",
+			"type": "shell",
+			"command": "C:\\Windows\\System32\\wsl.exe",
+			"args": [
+				"--cd",
+				"/mnt/c/Users/Trackbest/Documents/tcid-manage/backend",
+				"--exec",
+				"./.venv/bin/python",
+				"manage.py",
+				"makemigrations",
+				"--check",
+				"--dry-run"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

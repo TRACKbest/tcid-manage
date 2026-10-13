@@ -1,0 +1,141 @@
+import React from 'react'
+import { useEffect } from 'react'
+import axios from 'axios'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import Swal from 'sweetalert2'
+
+
+const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
+
+const TeacherRegister = () => {
+    useEffect(()=>{
+        document.title='TCiD Center | Inscription enseignant';
+    });
+
+    useEffect(() => {
+        window.scrollTo(0, 0)
+      }, [])
+
+    const [teacherData,setTeacherData]=useState({
+            'full_name':'',
+            'email':'',
+            'password':'',
+            'qualification':'',
+            'mobile_no':'',
+            'skills':'',
+            'status':''
+    })
+              const [profileImage, setProfileImage] = useState(null)
+
+    const handleChange=(event)=>{
+        setTeacherData({
+            ...teacherData,
+            [event.target.name]:event.target.value
+        });
+    }
+
+    const handleFileChange = (event) => {
+      setProfileImage(event.target.files[0] || null)
+    }
+
+    const submitForm=async ()=>{
+        const teacherFormData=new FormData();
+        teacherFormData.append("full_name",teacherData.full_name)
+        teacherFormData.append("email",teacherData.email)
+        teacherFormData.append("password",teacherData.password)
+        teacherFormData.append("qualification",teacherData.qualification)
+        teacherFormData.append("mobile_no",teacherData.mobile_no)
+        teacherFormData.append("skills",teacherData.skills)
+        if (profileImage) {
+          teacherFormData.append('profile_img', profileImage, profileImage.name)
+        }
+
+        try {
+          await axios.post(`${baseUrl}/teacher/`, teacherFormData)
+          setTeacherData({
+            full_name: '',
+            email: '',
+            password: '',
+            qualification: '',
+            mobile_no: '',
+            skills: '',
+            status: 'success'
+          })
+          setProfileImage(null)
+          Swal.fire({
+            title: 'Demande envoyée',
+            text: 'Votre compte sera accessible après validation par l’administrateur.',
+            icon: 'success',
+            toast: true,
+            timer: 2000,
+            position: 'top-right',
+            timerProgressBar: true,
+            showConfirmButton: false
+          })
+          window.setTimeout(() => window.location.assign('/teacher-login'), 2500)
+        } catch (error) {
+          console.error('Teacher registration failed:', error.response?.data || error)
+          setTeacherData(currentData => ({ ...currentData, status: 'error' }))
+        }
+    }
+
+    const teacherLoginStatus=localStorage.getItem('teacherLoginStatus')
+    if(teacherLoginStatus === 'true'){
+        window.location.href='/teacher-dashboard';
+    }
+    
+ return (
+    <div class="container">
+    <div class="row">
+      <div class="col-sm-9 col-md-7 col-lg-5 mx-auto">
+        <div class="card border-0 shadow rounded-3 my-5">
+          <div class="card-body p-4 p-sm-5">
+          <div class="text-center wow fadeInUp">
+          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION ENSEIGNANT</h5>
+          </div>            
+            {teacherData.status === 'success' && <h3 className='text-center text-success mb-3'>Demande envoyée. Votre compte sera activé après validation par l’administrateur.</h3>}
+            {teacherData.status === 'error' && <h3 className='text-center text-danger mb-3'>Une erreur est survenue. Vérifiez les informations et réessayez.</h3>}
+              <div class="form-floating mb-3">
+                <input type="text" onChange={handleChange} name='full_name' class="form-control" id="floatingInput" placeholder="Nom complet" />
+                <label for="floatingInput">Nom complet</label>
+              </div>
+              <div class="form-floating mb-3">
+                <input type="email" onChange={handleChange} name='email' class="form-control" id="floatingInput" placeholder="name@example.com"/>
+                <label for="floatingInput">Adresse e-mail</label>
+              </div>
+              <div class="form-floating mb-3">
+                <input name='password' type="password" onChange={handleChange} class="form-control" id="floatingPassword" placeholder="Mot de passe"/>
+                <label for="floatingPassword">Mot de passe</label>
+              </div>
+              <div class="form-floating mb-3">
+                <input type="text" onChange={handleChange} name='qualification' class="form-control" id="floatingInput" placeholder="Diplômes et qualifications"/>
+                <label for="floatingInput">Diplômes et qualifications</label>
+              </div>
+              <div class="form-floating mb-3">
+                <input type="tel" onChange={handleChange} name='mobile_no' class="form-control" id="floatingInput" placeholder="Téléphone"/>
+                <label for="floatingInput">Téléphone</label>
+              </div>
+              <div class="form-floating mb-3">
+                <textarea type="text" onChange={handleChange} name='skills' class="form-control" id="floatingInput" placeholder="Vos domaines d’expertise"></textarea>
+                <label for="floatingInput">Compétences</label>
+                <div id="emailHelp" className="form-text">Ex. : programmation, développement web, mathématiques…</div>
+              </div>
+              <div className="mb-3">
+                <label htmlFor="teacher-profile-image" className="form-label">Photo de profil (facultative)</label>
+                <input id="teacher-profile-image" type="file" accept="image/*" onChange={handleFileChange} className="form-control" />
+              </div>
+              <div class="d-grid my-4">
+                <button onClick={submitForm} class="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="submit" >Créer mon compte</button>
+                <hr className=''/>
+                <Link to='/teacher-login' class="btn btn-danger rounded-pill btn-login text-uppercase fw-bold">Déjà inscrit·e ? Connexion</Link>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  )
+}
+
+export default TeacherRegister

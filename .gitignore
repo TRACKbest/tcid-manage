@@ -1,0 +1,9 @@
+# Environnements virtuels Python
+backend/.venv/
+backend/venv/
+.venv/
+venv/
+
+# Fichiers d'environnement (Clés secrètes à ne pas publier)
+backend/.env
+.env

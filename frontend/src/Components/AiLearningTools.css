@@ -1,0 +1,260 @@
+.ai-learning-panel {
+  --ai-ink: #173232;
+  --ai-muted: #647574;
+  --ai-line: #dce6df;
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  border: 1px solid var(--ai-line);
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.ai-learning-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ai-line);
+}
+
+.ai-learning-mark {
+  display: grid;
+  width: 2.8rem;
+  flex: 0 0 2.8rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: #e6f0e9;
+  color: #17665b;
+  font-size: 1.25rem;
+}
+
+.ai-learning-eyebrow {
+  margin: 0 0 0.2rem;
+  color: #17665b;
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.ai-learning-header h2 {
+  margin: 0;
+  color: var(--ai-ink);
+  font-size: 1.15rem;
+}
+
+.ai-learning-header p:last-child {
+  margin: 0.25rem 0 0;
+  color: var(--ai-muted);
+  font-size: 0.85rem;
+}
+
+.ai-learning-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.9rem 0;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--ai-line);
+}
+
+.ai-learning-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #53635f;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.ai-learning-tabs button.is-selected {
+  border-color: #c6ded1;
+  background: #edf5ef;
+  color: #145a50;
+}
+
+.ai-learning-error {
+  margin: 0.7rem 0;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid #edc2b7;
+  border-radius: 0.5rem;
+  background: #fff5f1;
+  color: #872f22;
+  font-size: 0.85rem;
+}
+
+.ai-tutor-history {
+  display: grid;
+  max-height: 430px;
+  gap: 0.8rem;
+  overflow-y: auto;
+  padding: 0.2rem 0;
+}
+
+.ai-learning-empty {
+  margin: 0.5rem 0;
+  color: var(--ai-muted);
+  font-size: 0.88rem;
+}
+
+.ai-tutor-turn {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ai-tutor-question,
+.ai-tutor-response {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.55rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 0.89rem;
+  line-height: 1.5;
+}
+
+.ai-tutor-question {
+  justify-self: end;
+  max-width: 90%;
+  background: #e8f1eb;
+  color: var(--ai-ink);
+}
+
+.ai-tutor-question span,
+.ai-tutor-label,
+.ai-feedback-result > span {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #17665b;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.ai-tutor-response {
+  max-width: 96%;
+  border: 1px solid #e6ebe7;
+  background: #fbfcfa;
+  color: var(--ai-ink);
+}
+
+.ai-tutor-response p,
+.ai-feedback-result p {
+  margin: 0;
+}
+
+.ai-analytics-topics {
+  display: grid;
+  max-width: 720px;
+  gap: 1.1rem;
+  margin-top: 1.5rem;
+}
+
+.ai-analytics-topic > div:first-child {
+  color: #173232;
+  font-size: 0.9rem;
+}
+
+.ai-analytics-topic > div:first-child span {
+  color: #647574;
+  font-size: 0.82rem;
+}
+
+.ai-analytics-topic .progress {
+  height: 0.55rem;
+  border-radius: 1rem;
+  background: #e8efea;
+}
+
+.ai-analytics-topic .progress-bar {
+  border-radius: inherit;
+}
+
+.ai-tutor-response small {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--ai-muted);
+  font-size: 0.72rem;
+}
+
+.ai-learning-form,
+.ai-feedback-form {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+
+.ai-learning-form label,
+.ai-feedback-form label {
+  color: var(--ai-ink);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.ai-feedback-form label small {
+  margin-left: 0.3rem;
+  color: var(--ai-muted);
+  font-weight: 500;
+}
+
+.ai-learning-input-row {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.ai-learning-input-row input,
+.ai-feedback-form input,
+.ai-feedback-form textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--ai-line);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--ai-ink);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.ai-learning-input-row button {
+  width: 2.7rem;
+  flex: 0 0 2.7rem;
+}
+
+.ai-feedback-form textarea {
+  resize: vertical;
+}
+
+.ai-feedback-form > .btn {
+  justify-self: start;
+  margin-top: 0.2rem;
+}
+
+.ai-feedback-result {
+  padding: 0.85rem;
+  border-left: 3px solid #cf694f;
+  border-radius: 0.4rem;
+  background: #fbf6ee;
+  color: #393b32;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 560px) {
+  .ai-learning-panel {
+    padding: 0.8rem;
+  }
+
+  .ai-learning-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ai-learning-tabs button {
+    justify-content: flex-start;
+  }
+}

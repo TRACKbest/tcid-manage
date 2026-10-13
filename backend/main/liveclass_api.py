@@ -1,0 +1,183 @@
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from django.core import signing
+from django.db import IntegrityError, transaction
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from . import models
+from .serializers import LiveClassPollSerializer, LiveClassroomSerializer
+
+
+TOKEN_SALT = 'main.liveclass.participant'
+
+
+def _is_approved_student(student_id, course_id):
+    return models.StudentCourseEnrollment.objects.filter(
+        student_id=student_id,
+        course_id=course_id,
+        status=models.StudentCourseEnrollment.STATUS_APPROVED,
+    ).exists()
+
+
+def _broadcast(classroom_id, payload):
+    channel_layer = get_channel_layer()
+    if channel_layer:
+        async_to_sync(channel_layer.group_send)(
+            f'live_classroom_{classroom_id}',
+            {'type': 'room.event', 'payload': payload},
+        )
+
+
+def _poll_payload(poll):
+    return LiveClassPollSerializer(poll).data
+
+
+class CourseLiveClassrooms(APIView):
+    def get(self, request, course_id):
+        course = get_object_or_404(models.Course, pk=course_id)
+        teacher_id = request.query_params.get('teacher_id')
+        student_id = request.query_params.get('student_id')
+
+        if teacher_id:
+            if str(course.teacher_id) != teacher_id:
+                raise PermissionDenied('Only the course teacher can view these sessions.')
+        elif student_id:
+            if not _is_approved_student(student_id, course_id):
+                raise PermissionDenied('An approved course enrollment is required.')
+        else:
+            raise PermissionDenied('A teacher or student identity is required.')
+
+        sessions = models.LiveClassroom.objects.filter(course=course)
+        return Response(LiveClassroomSerializer(sessions, many=True).data)
+
+    def post(self, request, course_id):
+        course = get_object_or_404(models.Course, pk=course_id)
+        if str(course.teacher_id) != str(request.data.get('teacher_id', '')):
+            raise PermissionDenied('Only the course teacher can schedule a session.')
+
+        serializer = LiveClassroomSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        classroom = serializer.save(course=course)
+        return Response(LiveClassroomSerializer(classroom).data, status=status.HTTP_201_CREATED)
+
+
+class LiveClassroomAction(APIView):
+    def post(self, request, classroom_id, action):
+        classroom = get_object_or_404(models.LiveClassroom, pk=classroom_id)
+        if str(classroom.course.teacher_id) != str(request.data.get('teacher_id', '')):
+            raise PermissionDenied('Only the course teacher can control this session.')
+
+        if action == 'start':
+            if classroom.status == models.LiveClassroom.STATUS_ENDED:
+                return Response({'detail': 'This session has ended.'}, status=status.HTTP_409_CONFLICT)
+            if classroom.status != models.LiveClassroom.STATUS_LIVE:
+                classroom.status = models.LiveClassroom.STATUS_LIVE
+                classroom.started_at = timezone.now()
+                classroom.save(update_fields=['status', 'started_at'])
+            return Response(LiveClassroomSerializer(classroom).data)
+
+        if action == 'end':
+            classroom.status = models.LiveClassroom.STATUS_ENDED
+            classroom.ended_at = timezone.now()
+            classroom.save(update_fields=['status', 'ended_at'])
+            _broadcast(classroom.id, {'type': 'session_ended'})
+            return Response(LiveClassroomSerializer(classroom).data)
+
+        return Response({'detail': 'Unknown session action.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class LiveClassroomJoin(APIView):
+    def post(self, request, classroom_id):
+        classroom = get_object_or_404(models.LiveClassroom, pk=classroom_id)
+        if classroom.status != models.LiveClassroom.STATUS_LIVE:
+            return Response({'detail': 'This session is not live.'}, status=status.HTTP_409_CONFLICT)
+
+        teacher_id = request.data.get('teacher_id')
+        student_id = request.data.get('student_id')
+        if teacher_id:
+            if str(classroom.course.teacher_id) != str(teacher_id):
+                raise PermissionDenied('Only the course teacher can join with a teacher role.')
+            teacher = get_object_or_404(models.Teacher, pk=teacher_id)
+            role, participant_id, display_name = 'teacher', teacher.pk, teacher.full_name
+        elif student_id:
+            student = get_object_or_404(models.Student, pk=student_id)
+            if not _is_approved_student(student.pk, classroom.course_id):
+                raise PermissionDenied('An approved course enrollment is required.')
+            role, participant_id, display_name = 'student', student.pk, student.fullname
+        else:
+            raise PermissionDenied('A teacher or student identity is required.')
+
+        token = signing.dumps(
+            {'classroom_id': classroom.pk, 'role': role, 'participant_id': participant_id},
+            salt=TOKEN_SALT,
+            compress=True,
+        )
+        return Response({'token': token, 'role': role, 'display_name': display_name})
+
+
+class LiveClassPollListCreate(APIView):
+    def get(self, request, classroom_id):
+        classroom = get_object_or_404(models.LiveClassroom, pk=classroom_id)
+        teacher_id = request.query_params.get('teacher_id')
+        student_id = request.query_params.get('student_id')
+        if teacher_id:
+            if str(classroom.course.teacher_id) != teacher_id:
+                raise PermissionDenied('Only the course teacher can view these polls.')
+        elif not student_id or not _is_approved_student(student_id, classroom.course_id):
+            raise PermissionDenied('An approved course enrollment is required.')
+
+        polls = classroom.polls.all()
+        return Response(LiveClassPollSerializer(polls, many=True).data)
+
+    def post(self, request, classroom_id):
+        classroom = get_object_or_404(models.LiveClassroom, pk=classroom_id)
+        if str(classroom.course.teacher_id) != str(request.data.get('teacher_id', '')):
+            raise PermissionDenied('Only the course teacher can create a poll.')
+        if classroom.status != models.LiveClassroom.STATUS_LIVE:
+            return Response({'detail': 'Polls are available only during a live session.'}, status=status.HTTP_409_CONFLICT)
+
+        serializer = LiveClassPollSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            classroom.polls.filter(is_active=True).update(is_active=False)
+            poll = serializer.save(classroom=classroom)
+        payload = {'type': 'poll_started', 'poll': _poll_payload(poll)}
+        _broadcast(classroom.id, payload)
+        return Response(payload['poll'], status=status.HTTP_201_CREATED)
+
+
+class LiveClassPollVote(APIView):
+    def post(self, request, poll_id):
+        poll = get_object_or_404(models.LiveClassPoll.objects.select_related('classroom__course'), pk=poll_id)
+        classroom = poll.classroom
+        if classroom.status != models.LiveClassroom.STATUS_LIVE or not poll.is_active:
+            return Response({'detail': 'This poll is closed.'}, status=status.HTTP_409_CONFLICT)
+
+        student = get_object_or_404(models.Student, pk=request.data.get('student_id'))
+        if not _is_approved_student(student.pk, classroom.course_id):
+            raise PermissionDenied('An approved course enrollment is required.')
+        try:
+            option_index = int(request.data.get('option_index'))
+        except (TypeError, ValueError):
+            return Response({'detail': 'A valid poll option is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if option_index < 0 or option_index >= len(poll.options):
+            return Response({'detail': 'The selected option does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with transaction.atomic():
+                models.LiveClassPollVote.objects.create(
+                    poll=poll,
+                    student=student,
+                    option_index=option_index,
+                )
+        except IntegrityError:
+            return Response({'detail': 'You have already answered this poll.'}, status=status.HTTP_409_CONFLICT)
+
+        payload = {'type': 'poll_results', 'poll': _poll_payload(poll)}
+        _broadcast(classroom.id, payload)
+        return Response(payload['poll'])
