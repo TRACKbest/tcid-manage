@@ -101,7 +101,7 @@ const MyTeachers = () => {
                             <tbody>
                             {teacherData.map((row,index) =>
                                 <tr key={row.teacher.id}>
-                                    <td  className='text-center'><Link to={`/teacher-detail/`+row.teacher.id}><img className='imgmeet' src={row.teacher.profile_img} alt={`Photo de ${row.teacher.full_name}`}/></Link></td>
+                                    <td  className='text-center'><Link to={`/teacher-detail/`+row.teacher.id}><img className='imgmeet' src={row.teacher.profile_img} alt={row.teacher.full_name}/></Link></td>
                                     <td className='text-center'><Link to={`/teacher-detail/`+row.teacher.id}>{row.teacher.full_name}</Link></td>
                                     <td className='text-center'>
                                     <button id={`open-teacher-chat-${row.teacher.id}`} data-bs-toggle="modal" data-bs-target={`#msgModal${index}`} className='btn btn-sm btn-success mb-2'><i className="bi bi-whatsapp"></i></button>

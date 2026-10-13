@@ -105,14 +105,32 @@ def _cache_key(feature, course_id, text):
     return hashlib.sha256(f'{feature}:{course_id}:{normalized}'.encode('utf-8')).hexdigest()
 
 
+def _course_content_fingerprint(course):
+    materials = list(
+        models.StudyMaterial.objects.filter(course_id=course.pk)
+        .order_by('pk')
+        .values_list('title', 'description', 'remarks', 'extracted_text')
+    )
+    content = json.dumps(
+        [course.title, course.description, materials],
+        ensure_ascii=False,
+        separators=(',', ':'),
+    )
+    return hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+
 def answer_course_question(course, question):
+    _require_api_key()
     display_question = re.sub(r'\s+', ' ', question.strip())
     normalized_question = re.sub(r'[?.!]+$', '', display_question.casefold()).strip()
     chunks = retrieve_chunks(course, question, limit=3)
     if not chunks:
         raise ValueError('Aucun contenu textuel exploitable n’est disponible pour ce cours.')
     context = '\n\n'.join(f"[{chunk['title']}] {chunk['text']}" for chunk in chunks)
-    cache_key = _cache_key('tutor', course.pk, f'{question}\n{context}')
+    content_fingerprint = _course_content_fingerprint(course)
+    cache_key = _cache_key(
+        'tutor', course.pk, f'{question}\n{content_fingerprint}\n{context}',
+    )
     cached = models.AICachedResponse.objects.filter(
         feature='tutor', cache_key=cache_key, course=course,
     ).first()
@@ -121,7 +139,6 @@ def answer_course_question(course, question):
         sources = cached.metadata if hasattr(cached, 'metadata') else []
         cache_hit = True
     else:
-        _require_api_key()
         answer = _complete(
             'Tu es un tuteur pédagogique. Réponds en français, en 300 tokens maximum. '
             'Utilise uniquement le CONTEXTE fourni; si la réponse manque, dis-le clairement. '
@@ -226,7 +243,11 @@ def generate_quiz_questions(quiz, teacher_id):
 def grade_open_answer(course, question, answer):
     chunks = retrieve_chunks(course, question, limit=3)
     context = '\n\n'.join(f"[{chunk['title']}] {chunk['text']}" for chunk in chunks)
-    cache_key = _cache_key('feedback', course.pk, f'{question}\n{answer}\n{context}')
+    content_fingerprint = _course_content_fingerprint(course)
+    cache_key = _cache_key(
+        'feedback', course.pk,
+        f'{question}\n{answer}\n{content_fingerprint}\n{context}',
+    )
     cached = models.AICachedResponse.objects.filter(
         feature='feedback', cache_key=cache_key, course=course,
     ).first()

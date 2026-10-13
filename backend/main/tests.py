@@ -255,30 +255,32 @@ class LiveClassroomWebSocketTests(TransactionTestCase):
 				application,
 				f'/ws/live-classrooms/{self.classroom.pk}/?{urlencode({"token": self.student_token})}',
 			)
-			teacher_connected, _ = await teacher_socket.connect()
-			teacher_joined = await teacher_socket.receive_json_from()
-			await teacher_socket.receive_json_from()
-			student_connected, _ = await student_socket.connect()
-			student_joined = await student_socket.receive_json_from()
-			await student_socket.receive_json_from()
-			await teacher_socket.receive_json_from()
+			teacher_connected, teacher_close_code = await teacher_socket.connect(timeout=5)
+			self.assertTrue(teacher_connected, f'WebSocket rejected with close code {teacher_close_code}')
+			teacher_joined = await teacher_socket.receive_json_from(timeout=5)
+			await teacher_socket.receive_json_from(timeout=5)
+			student_connected, student_close_code = await student_socket.connect(timeout=5)
+			self.assertTrue(student_connected, f'WebSocket rejected with close code {student_close_code}')
+			student_joined = await student_socket.receive_json_from(timeout=5)
+			await student_socket.receive_json_from(timeout=5)
+			await teacher_socket.receive_json_from(timeout=5)
 
 			await student_socket.send_json_to({'type': 'raise_hand', 'up': True})
-			await student_socket.receive_json_from()
-			hand_event = await teacher_socket.receive_json_from()
+			await student_socket.receive_json_from(timeout=5)
+			hand_event = await teacher_socket.receive_json_from(timeout=5)
 			await teacher_socket.send_json_to({
 				'type': 'moderate',
 				'target': student_joined['peer_id'],
 				'control': 'microphone',
 				'enabled': False,
 			})
-			moderation_event = await student_socket.receive_json_from()
+			moderation_event = await student_socket.receive_json_from(timeout=5)
 			await teacher_socket.send_json_to({
 				'type': 'signal',
 				'target': student_joined['peer_id'],
 				'signal': {'type': 'offer', 'sdp': 'test-sdp'},
 			})
-			signal_event = await student_socket.receive_json_from()
+			signal_event = await student_socket.receive_json_from(timeout=5)
 			await student_socket.disconnect()
 			await teacher_socket.disconnect()
 			return teacher_connected, student_connected, teacher_joined, hand_event, moderation_event, signal_event

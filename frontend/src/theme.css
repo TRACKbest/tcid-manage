@@ -382,7 +382,7 @@ textarea.form-control {
 .chat-composer {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  align-items: end;
+  align-items: flex-end;
   gap: 0.65rem;
   width: 100%;
 }

@@ -240,7 +240,7 @@ const AddCourseWizard = () => {
                   </div>
                   <div className="course-preview-pane">
                     <div className="course-preview-label">APERÇU SUR LE SITE</div>
-                    {imagePreview && <img src={imagePreview} alt="Aperçu de l’image du cours" className="course-preview-image" />}
+                    {imagePreview && <img src={imagePreview} alt="Aperçu du cours" className="course-preview-image" />}
                     <h3>{courseData.title || 'Titre du cours'}</h3>
                     <div className="course-description-preview" dangerouslySetInnerHTML={{ __html: safePreview || '<p>Votre présentation apparaîtra ici.</p>' }} />
                   </div>
