@@ -125,6 +125,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_PASSWORD }}
           fingerprint: ${{ secrets.VPS_FINGERPRINT }}
           source: deploy.tar.gz
           target: /var/www/tcid-manage/releases/${{ github.sha }}
@@ -142,6 +143,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_PASSWORD }}
           fingerprint: ${{ secrets.VPS_FINGERPRINT }}
           envs: GITHUB_SHA,VPS_HOST,OPENAI_API_KEY,OPENAI_MODEL,OPENAI_MAX_TOKENS
           script: |
