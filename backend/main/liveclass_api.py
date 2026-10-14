@@ -37,6 +37,23 @@ def _poll_payload(poll):
     return LiveClassPollSerializer(poll).data
 
 
+def _notify_enrolled_students(classroom, subject, message):
+    student_ids = models.StudentCourseEnrollment.objects.filter(
+        course_id=classroom.course_id,
+        student_id__isnull=False,
+        status=models.StudentCourseEnrollment.STATUS_APPROVED,
+    ).values_list('student_id', flat=True).distinct()
+    models.Notification.objects.bulk_create([
+        models.Notification(
+            student_id=student_id,
+            subject=subject,
+            message=message,
+            link=f'/live-classroom/{classroom.course_id}',
+        )
+        for student_id in student_ids
+    ])
+
+
 class CourseLiveClassrooms(APIView):
     def get(self, request, course_id):
         course = get_object_or_404(models.Course, pk=course_id)
@@ -63,22 +80,42 @@ class CourseLiveClassrooms(APIView):
         serializer = LiveClassroomSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         classroom = serializer.save(course=course)
+        if classroom.scheduled_at:
+            scheduled_time = timezone.localtime(classroom.scheduled_at).strftime('%d/%m/%Y à %H:%M')
+            _notify_enrolled_students(
+                classroom,
+                'Classe virtuelle programmée',
+                f'La session « {classroom.title} » du cours {course.title} est prévue le {scheduled_time}.',
+            )
         return Response(LiveClassroomSerializer(classroom).data, status=status.HTTP_201_CREATED)
 
 
 class LiveClassroomAction(APIView):
     def post(self, request, classroom_id, action):
-        classroom = get_object_or_404(models.LiveClassroom, pk=classroom_id)
+        classroom = get_object_or_404(
+            models.LiveClassroom.objects.select_related('course'),
+            pk=classroom_id,
+        )
         if str(classroom.course.teacher_id) != str(request.data.get('teacher_id', '')):
             raise PermissionDenied('Only the course teacher can control this session.')
 
         if action == 'start':
-            if classroom.status == models.LiveClassroom.STATUS_ENDED:
-                return Response({'detail': 'This session has ended.'}, status=status.HTTP_409_CONFLICT)
-            if classroom.status != models.LiveClassroom.STATUS_LIVE:
-                classroom.status = models.LiveClassroom.STATUS_LIVE
-                classroom.started_at = timezone.now()
-                classroom.save(update_fields=['status', 'started_at'])
+            with transaction.atomic():
+                classroom = get_object_or_404(
+                    models.LiveClassroom.objects.select_for_update().select_related('course'),
+                    pk=classroom_id,
+                )
+                if classroom.status == models.LiveClassroom.STATUS_ENDED:
+                    return Response({'detail': 'This session has ended.'}, status=status.HTTP_409_CONFLICT)
+                if classroom.status != models.LiveClassroom.STATUS_LIVE:
+                    classroom.status = models.LiveClassroom.STATUS_LIVE
+                    classroom.started_at = timezone.now()
+                    classroom.save(update_fields=['status', 'started_at'])
+                    _notify_enrolled_students(
+                        classroom,
+                        'Classe virtuelle en direct',
+                        f'La session « {classroom.title} » du cours {classroom.course.title} a commencé. Rejoignez-la maintenant.',
+                    )
             return Response(LiveClassroomSerializer(classroom).data)
 
         if action == 'end':

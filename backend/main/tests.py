@@ -134,15 +134,40 @@ class LiveClassroomApiTests(TestCase):
 			student=self.student,
 			status=StudentCourseEnrollment.STATUS_APPROVED,
 		)
+		self.pending_student = Student.objects.create(
+			fullname='Katherine Johnson',
+			email='katherine@example.com',
+			username='katherine',
+			interseted_categories='Programming',
+		)
+		StudentCourseEnrollment.objects.create(
+			course=self.course,
+			student=self.pending_student,
+			status=StudentCourseEnrollment.STATUS_PENDING,
+		)
 
 	def test_teacher_can_run_a_poll_for_enrolled_students(self):
 		create_response = self.client.post(
 			f'/api/courses/{self.course.pk}/live-classrooms/',
-			{'teacher_id': self.teacher.pk, 'title': 'Python live'},
+			{
+				'teacher_id': self.teacher.pk,
+				'title': 'Python live',
+				'scheduled_at': '2030-06-15T14:30:00Z',
+			},
 			format='json',
 		)
 		self.assertEqual(create_response.status_code, 201, create_response.data)
 		classroom_id = create_response.data['id']
+		scheduled_notification = Notification.objects.get(
+			student=self.student,
+			subject='Classe virtuelle programmée',
+		)
+		self.assertIn('15/06/2030', scheduled_notification.message)
+		self.assertEqual(scheduled_notification.link, f'/live-classroom/{self.course.pk}')
+		self.assertFalse(Notification.objects.filter(
+			student=self.pending_student,
+			subject='Classe virtuelle programmée',
+		).exists())
 
 		start_response = self.client.post(
 			f'/api/live-classrooms/{classroom_id}/start/',
@@ -150,6 +175,27 @@ class LiveClassroomApiTests(TestCase):
 			format='json',
 		)
 		self.assertEqual(start_response.status_code, 200, start_response.data)
+		started_notification = Notification.objects.get(
+			student=self.student,
+			subject='Classe virtuelle en direct',
+		)
+		self.assertIn('a commencé', started_notification.message)
+		self.assertEqual(started_notification.link, f'/live-classroom/{self.course.pk}')
+		self.assertFalse(Notification.objects.filter(
+			student=self.pending_student,
+			subject='Classe virtuelle en direct',
+		).exists())
+
+		repeated_start_response = self.client.post(
+			f'/api/live-classrooms/{classroom_id}/start/',
+			{'teacher_id': self.teacher.pk},
+			format='json',
+		)
+		self.assertEqual(repeated_start_response.status_code, 200, repeated_start_response.data)
+		self.assertEqual(
+			Notification.objects.filter(student=self.student, subject='Classe virtuelle en direct').count(),
+			1,
+		)
 
 		join_response = self.client.post(
 			f'/api/live-classrooms/{classroom_id}/join/',
