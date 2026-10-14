@@ -6,6 +6,22 @@ const rtcConfiguration = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 }
 
+const getDeviceErrorMessage = (error, device) => {
+  if (error?.name === 'NotAllowedError' || error?.name === 'PermissionDeniedError') {
+    return `L’accès au ${device} est refusé par le navigateur. Vérifiez les autorisations du site puis réessayez.`
+  }
+  if (error?.name === 'NotFoundError' || error?.name === 'DevicesNotFoundError') {
+    return `Aucun ${device} n’a été détecté sur cet appareil.`
+  }
+  if (error?.name === 'NotReadableError' || error?.name === 'TrackStartError') {
+    return `Le ${device} est déjà utilisé par une autre application. Fermez-la puis réessayez.`
+  }
+  if (error?.name === 'SecurityError' || error?.name === 'TypeError') {
+    return `L’accès au ${device} nécessite une connexion HTTPS sécurisée.`
+  }
+  return `Impossible d’activer le ${device}. Vérifiez les autorisations et réessayez.`
+}
+
 const drawStroke = (canvas, stroke) => {
   if (!canvas || !stroke?.points?.length) return
   const context = canvas.getContext('2d')
@@ -48,6 +64,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   const [handRaised, setHandRaised] = useState(false)
   const [micEnabled, setMicEnabled] = useState(true)
   const [cameraEnabled, setCameraEnabled] = useState(true)
+  const [cameraAvailable, setCameraAvailable] = useState(false)
   const [forcedMicOff, setForcedMicOff] = useState(false)
   const [forcedCameraOff, setForcedCameraOff] = useState(false)
   const [sharingScreen, setSharingScreen] = useState(false)
@@ -80,15 +97,41 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
     let disposed = false
     const peerConnections = peerConnectionsRef.current
     const startRoom = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraEnabled(false)
+        setMediaError('La caméra et le micro nécessitent une connexion sécurisée (HTTPS) et un navigateur compatible.')
+      } else {
+        localStreamRef.current = new MediaStream()
+        const [videoResult, audioResult] = await Promise.allSettled([
+          navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }),
+          navigator.mediaDevices.getUserMedia({ audio: true, video: false }),
+        ])
+
         if (disposed) {
-          stream.getTracks().forEach((track) => track.stop())
+          for (const result of [videoResult, audioResult]) {
+            if (result.status === 'fulfilled') result.value.getTracks().forEach((track) => track.stop())
+          }
           return
         }
-        localStreamRef.current = stream
-      } catch (error) {
-        setMediaError('Autorisez le micro et la caméra pour participer en audio/vidéo. Le chat reste disponible.')
+
+        if (videoResult.status === 'fulfilled') {
+          videoResult.value.getVideoTracks().forEach((track) => localStreamRef.current.addTrack(track))
+          setCameraAvailable(true)
+          setCameraEnabled(true)
+        } else {
+          setCameraEnabled(false)
+          setMediaError(getDeviceErrorMessage(videoResult.reason, 'caméra'))
+        }
+
+        if (audioResult.status === 'fulfilled') {
+          audioResult.value.getAudioTracks().forEach((track) => localStreamRef.current.addTrack(track))
+          setMicEnabled(true)
+        } else {
+          setMicEnabled(false)
+          if (videoResult.status === 'fulfilled') {
+            setMediaError(getDeviceErrorMessage(audioResult.reason, 'micro'))
+          }
+        }
       }
 
       if (disposed) return
@@ -115,11 +158,10 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
         const audioTracks = localStreamRef.current?.getAudioTracks() || []
         const videoTrack = screenStreamRef.current?.getVideoTracks()[0]
           || localStreamRef.current?.getVideoTracks()[0]
-        const tracks = [...audioTracks, ...(videoTrack ? [videoTrack] : [])]
-        if (tracks.length) {
-          const mediaStream = new MediaStream(tracks)
-          tracks.forEach((track) => connection.addTrack(track, mediaStream))
-        }
+        const mediaStream = localStreamRef.current || new MediaStream()
+        audioTracks.forEach((track) => connection.addTrack(track, mediaStream))
+        if (videoTrack) connection.addTrack(videoTrack, mediaStream)
+        else connection.addTransceiver('video', { direction: 'sendrecv' })
         connection.onicecandidate = (event) => {
           if (event.candidate) send({ type: 'signal', target: remotePeerId, signal: { candidate: event.candidate } })
         }
@@ -265,10 +307,39 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   }
 
   const toggleCamera = () => {
-    if (forcedCameraOff) return
-    const nextValue = !cameraEnabled
-    localStreamRef.current?.getVideoTracks().forEach((track) => { track.enabled = nextValue })
-    setCameraEnabled(nextValue)
+    if (forcedCameraOff || !navigator.mediaDevices?.getUserMedia) return
+    const cameraTrack = localStreamRef.current?.getVideoTracks()[0]
+    if (cameraTrack) {
+      const nextValue = !cameraEnabled
+      cameraTrack.enabled = nextValue
+      setCameraEnabled(nextValue)
+      return
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(async (stream) => {
+        const newCameraTrack = stream.getVideoTracks()[0]
+        if (!newCameraTrack) {
+          stream.getTracks().forEach((track) => track.stop())
+          setMediaError('Aucune caméra vidéo n’a été détectée sur cet appareil.')
+          return
+        }
+        if (!localStreamRef.current) localStreamRef.current = new MediaStream()
+        localStreamRef.current.addTrack(newCameraTrack)
+        if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current
+        for (const connection of peerConnectionsRef.current.values()) {
+          const videoSender = connection.getSenders().find((sender) => sender.track?.kind === 'video')
+            || connection.getTransceivers().find((transceiver) => transceiver.receiver.track.kind === 'video')?.sender
+          if (videoSender) await videoSender.replaceTrack(newCameraTrack)
+        }
+        setCameraAvailable(true)
+        setCameraEnabled(true)
+        setMediaError('')
+      })
+      .catch((error) => {
+        setCameraEnabled(false)
+        setMediaError(getDeviceErrorMessage(error, 'caméra'))
+      })
   }
 
   const stopScreenShare = async () => {
@@ -425,7 +496,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
           <div className="live-video-grid">
             <article className="live-video-tile is-local">
               <video autoPlay muted playsInline ref={localVideoRef} />
-              {!localStreamRef.current && <div className="live-video-placeholder"><i className="bi bi-person-video3" aria-hidden="true" /><span>Caméra désactivée</span></div>}
+              {(!cameraAvailable || !cameraEnabled) && <div className="live-video-placeholder"><i className="bi bi-person-video3" aria-hidden="true" /><span>{cameraAvailable ? 'Caméra désactivée' : 'Caméra indisponible — appuyez sur Caméra pour réessayer'}</span></div>}
               <div className="live-video-label"><span>{joinInfo.display_name} · Vous</span><i className={`bi ${micEnabled ? 'bi-mic-fill' : 'bi-mic-mute-fill'}`} aria-label={micEnabled ? 'Micro activé' : 'Micro coupé'} /></div>
             </article>
             {remoteParticipants.map((person) => (
