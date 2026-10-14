@@ -233,14 +233,8 @@ class LiveClassroomApiTests(TestCase):
 		self.assertEqual(duplicate_response.status_code, 409)
 
 	def test_non_enrolled_student_cannot_list_classroom_sessions(self):
-		student = Student.objects.create(
-			fullname='Katherine Johnson',
-			email='katherine@example.com',
-			username='katherine',
-			interseted_categories='Mathematics',
-		)
 		response = self.client.get(
-			f'/api/courses/{self.course.pk}/live-classrooms/?student_id={student.pk}')
+			f'/api/courses/{self.course.pk}/live-classrooms/?student_id={self.pending_student.pk}')
 		self.assertEqual(response.status_code, 403)
 
 
