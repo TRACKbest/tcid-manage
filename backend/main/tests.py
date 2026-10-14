@@ -268,6 +268,15 @@ class LiveClassroomWebSocketTests(TransactionTestCase):
 			await student_socket.receive_json_from(timeout=5)
 			await teacher_socket.receive_json_from(timeout=5)
 
+			await student_socket.send_json_to({'type': 'roster_request'})
+			student_roster_request = await student_socket.receive_json_from(timeout=5)
+			teacher_roster_request = await teacher_socket.receive_json_from(timeout=5)
+			await teacher_socket.send_json_to({
+				'type': 'roster_response',
+				'target': student_joined['peer_id'],
+			})
+			student_roster = await student_socket.receive_json_from(timeout=5)
+
 			await student_socket.send_json_to({'type': 'raise_hand', 'up': True})
 			await student_socket.receive_json_from(timeout=5)
 			hand_event = await teacher_socket.receive_json_from(timeout=5)
@@ -291,13 +300,17 @@ class LiveClassroomWebSocketTests(TransactionTestCase):
 			whiteboard_event = await student_socket.receive_json_from(timeout=5)
 			await student_socket.disconnect()
 			await teacher_socket.disconnect()
-			return teacher_connected, student_connected, teacher_joined, hand_event, moderation_event, signal_event, whiteboard_event
+			return teacher_connected, student_connected, teacher_joined, student_roster_request, teacher_roster_request, student_roster, hand_event, moderation_event, signal_event, whiteboard_event
 
 		result = async_to_sync(exercise_room)()
-		teacher_connected, student_connected, teacher_joined, hand_event, moderation_event, signal_event, whiteboard_event = result
+		teacher_connected, student_connected, teacher_joined, student_roster_request, teacher_roster_request, student_roster, hand_event, moderation_event, signal_event, whiteboard_event = result
 		self.assertTrue(teacher_connected)
 		self.assertTrue(student_connected)
 		self.assertEqual(teacher_joined['role'], 'teacher')
+		self.assertEqual(student_roster_request['type'], 'roster_request')
+		self.assertEqual(teacher_roster_request['requester'], student_joined['peer_id'])
+		self.assertEqual(student_roster['type'], 'roster_response')
+		self.assertEqual(student_roster['participant']['role'], 'teacher')
 		self.assertEqual(hand_event['type'], 'raise_hand')
 		self.assertEqual(moderation_event['type'], 'moderate')
 		self.assertEqual(signal_event['signal']['sdp'], 'test-sdp')

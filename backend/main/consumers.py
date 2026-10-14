@@ -129,6 +129,20 @@ class LiveClassroomConsumer(AsyncJsonWebsocketConsumer):
                 payload = {'type': 'whiteboard', 'stroke': stroke, 'peer_id': self.peer_id}
         elif message_type == 'whiteboard_clear' and self.role == 'teacher':
             payload = {'type': 'whiteboard_clear'}
+        elif message_type == 'roster_request':
+            payload = {'type': 'roster_request', 'requester': self.peer_id}
+        elif message_type == 'roster_response':
+            target = content.get('target')
+            if isinstance(target, str) and target != self.peer_id:
+                payload = {
+                    'type': 'roster_response',
+                    'target': target,
+                    'participant': {
+                        'peer_id': self.peer_id,
+                        'role': self.role,
+                        'display_name': self.display_name,
+                    },
+                }
 
         if payload:
             await self.channel_layer.group_send(

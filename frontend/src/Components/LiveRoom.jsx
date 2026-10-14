@@ -226,17 +226,25 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
           peerIdRef.current = message.peer_id
           setPeerId(message.peer_id)
           setParticipants((current) => [...current.filter((item) => item.peer_id !== message.peer_id), message])
-        } else if (message.type === 'participant_joined' && message.participant.peer_id !== peerIdRef.current) {
+          send({ type: 'roster_request' })
+        } else if (
+          (message.type === 'participant_joined' || message.type === 'roster_response')
+          && message.participant.peer_id !== peerIdRef.current
+        ) {
           const remote = message.participant
           setParticipants((current) => [...current.filter((item) => item.peer_id !== remote.peer_id), remote])
-          const connection = createPeerConnection(remote.peer_id)
-          try {
-            const offer = await connection.createOffer()
-            await connection.setLocalDescription(offer)
-            send({ type: 'signal', target: remote.peer_id, signal: connection.localDescription })
-          } catch (error) {
-            console.error('Could not offer a peer connection:', error)
+          if (message.type === 'participant_joined') {
+            const connection = createPeerConnection(remote.peer_id)
+            try {
+              const offer = await connection.createOffer()
+              await connection.setLocalDescription(offer)
+              send({ type: 'signal', target: remote.peer_id, signal: connection.localDescription })
+            } catch (error) {
+              console.error('Could not offer a peer connection:', error)
+            }
           }
+        } else if (message.type === 'roster_request' && message.requester !== peerIdRef.current) {
+          send({ type: 'roster_response', target: message.requester })
         } else if (message.type === 'participant_left') {
           peerConnectionsRef.current.get(message.peer_id)?.close()
           peerConnectionsRef.current.delete(message.peer_id)
@@ -490,7 +498,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
         </div>
         <div className="live-room-header-actions">
           <span className="live-room-connection"><span />{connectionStatus}</span>
-          <span className="live-room-count"><i className="bi bi-people-fill" aria-hidden="true" />{participants.length}</span>
+          <span className="live-room-count" aria-label={`${participants.length} participant${participants.length === 1 ? '' : 's'} dans la classe`} title="Participants dans la classe"><i className="bi bi-people-fill" aria-hidden="true" />{participants.length}</span>
           {canModerate && onEnd ? (
             <button className="btn btn-outline-danger btn-sm" onClick={onEnd} type="button">Terminer la classe</button>
           ) : null}
