@@ -27,6 +27,9 @@ const CourseDetail = () => {
     const [favoriteStatus,setFavoriteStatus]=useState([])
     const [courseViews,setCourseViews]=useState(0)
     const [avgRating,setAvgRating]=useState(0)
+    const [ratingModalOpen,setRatingModalOpen]=useState(false)
+    const [ratingSubmitting,setRatingSubmitting]=useState(false)
+    const [ratingError,setRatingError]=useState('')
     const studentId=localStorage.getItem('studentId')
 
     useEffect(() => {
@@ -117,28 +120,45 @@ const CourseDetail = () => {
       })
     }
 
-    const formSubmit = () => {
+    const formSubmit = async (event) => {
+      event.preventDefault()
+      if (!studentId || ratingSubmitting) return
+      const rating = Number(ratingData.rating)
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        setRatingError('Choisissez une note entre 1 et 5.')
+        return
+      }
+
+      setRatingSubmitting(true)
+      setRatingError('')
       const formData = new FormData()
       formData.append('course', course_id)
       formData.append('student', studentId)
-      formData.append('rating', ratingData.rating)
+      formData.append('rating', String(rating))
       formData.append('reviews', ratingData.reviews)
 
-      axios.post(baseUrl + '/course-rating/', formData)
-        .then((res) => {
-          if (res.status === 200 || res.status === 201) {
-            Swal.fire({
-              title: 'Votre évaluation a été enregistrée.',
-              icon: 'success',
-              toast: true,
-              timer: 3000,
-              position: 'top-right',
-              timerProgressBar: true,
-              showConfirmButton: false
-            })
-          }
+      try {
+        await axios.post(`${baseUrl}/course-rating/`, formData)
+        setRatingStatus('success')
+        setRatingModalOpen(false)
+        axios.get(`${baseUrl}/course/${course_id}`)
+          .then((response) => setAvgRating(response.data.course_rating ?? 0))
+          .catch((error) => console.error('Could not refresh the course rating:', error.response?.data || error))
+        Swal.fire({
+          title: 'Votre évaluation a été enregistrée.',
+          icon: 'success',
+          toast: true,
+          timer: 3000,
+          position: 'top-right',
+          timerProgressBar: true,
+          showConfirmButton: false
         })
-        .catch((error) => console.error(error))
+      } catch (error) {
+        console.error('Course rating submission failed:', error.response?.data || error)
+        setRatingError(error.response?.data?.detail || 'Votre évaluation n’a pas pu être envoyée. Vérifiez votre connexion puis réessayez.')
+      } finally {
+        setRatingSubmitting(false)
+      }
     }
 
     const markAsFav = () => {
@@ -213,43 +233,50 @@ const CourseDetail = () => {
                 {enrolledStatus === 'approved' && userLoginStatus === 'success' &&
                 <>
                 {ratingStatus !== 'success' && 
-                  <button className='btn btn-success btn-sm ms-2' data-bs-toggle="modal" data-bs-target="#ratingModal">Évaluer</button>   
+                  <button className='btn btn-success btn-sm ms-2' onClick={() => { setRatingError(''); setRatingModalOpen(true) }} type="button">Évaluer</button>
                 }
                 {ratingStatus === 'success' && 
                   <span className='btn btn-success btn-sm ms-2 rounded-pill mt-2' >Vous avez déjà évalué ce cours</span>   
                 }
-                      <div className="modal fade" id="ratingModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-                        <div className="modal-dialog modal-lg">
-                          <div className="modal-content">
-                            <div className="modal-header">
-                              <h5 className="modal-title" id="exampleModalLabel">Évaluer : {courseData.title}</h5>
-                              <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div className="modal-body">
-                            
-                                <div class="mb-3">
-                                  <label for="exampleInputEmail1" class="form-label">Note</label>
-                                  <select onChange={handleChange} className='form-control' name='rating'>
-                                    <option value="1">1</option>
-                                    <option value="2">2</option>
-                                    <option value="3">3</option>
-                                    <option value="4">4</option>
-                                    <option value="5">5</option>
-                                  </select>
-                                </div>
-                                <div class="mb-3">
-                                  <label for="exampleInputPassword1" class="form-label">Votre avis</label>
-                                  <textarea onChange={handleChange} name="reviews" class="form-control" rows="6" />
-                                </div>
-                                <button onClick={formSubmit} type="submit" class="btn btn-primary">Envoyer</button>
-                              
-                            </div>
-                          </div>
-                        </div>
-                        </div>
                   </>
                 }  
                 </p>
+                {ratingModalOpen && (
+                  <div className="modal d-block" role="presentation" onMouseDown={(event) => {
+                    if (event.target === event.currentTarget && !ratingSubmitting) setRatingModalOpen(false)
+                  }} style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+                    <div className="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="rating-modal-title">
+                      <form className="modal-content" onSubmit={formSubmit}>
+                        <div className="modal-header">
+                          <h5 className="modal-title" id="rating-modal-title">Évaluer : {courseData.title}</h5>
+                          <button type="button" className="btn-close" onClick={() => setRatingModalOpen(false)} aria-label="Fermer" disabled={ratingSubmitting}></button>
+                        </div>
+                        <div className="modal-body">
+                          <div className="mb-3">
+                            <label htmlFor="course-rating-value" className="form-label">Note</label>
+                            <select id="course-rating-value" onChange={handleChange} value={ratingData.rating} className="form-control" name="rating" required>
+                              <option value="">Choisir une note</option>
+                              <option value="1">1 / 5</option>
+                              <option value="2">2 / 5</option>
+                              <option value="3">3 / 5</option>
+                              <option value="4">4 / 5</option>
+                              <option value="5">5 / 5</option>
+                            </select>
+                          </div>
+                          <div className="mb-3">
+                            <label htmlFor="course-rating-review" className="form-label">Votre avis (facultatif)</label>
+                            <textarea id="course-rating-review" onChange={handleChange} value={ratingData.reviews} name="reviews" className="form-control" rows="6" />
+                          </div>
+                          {ratingError && <p className="text-danger" role="alert">{ratingError}</p>}
+                        </div>
+                        <div className="modal-footer">
+                          <button type="button" className="btn btn-secondary" onClick={() => setRatingModalOpen(false)} disabled={ratingSubmitting}>Annuler</button>
+                          <button type="submit" className="btn btn-primary" disabled={ratingSubmitting}>{ratingSubmitting ? 'Envoi…' : 'Envoyer l’évaluation'}</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
                 <p className='fw-bold'>
                     Consultations : {courseViews}
                 </p>
