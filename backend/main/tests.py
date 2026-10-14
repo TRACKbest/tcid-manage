@@ -300,10 +300,10 @@ class LiveClassroomWebSocketTests(TransactionTestCase):
 			whiteboard_event = await student_socket.receive_json_from(timeout=5)
 			await student_socket.disconnect()
 			await teacher_socket.disconnect()
-			return teacher_connected, student_connected, teacher_joined, student_roster_request, teacher_roster_request, student_roster, hand_event, moderation_event, signal_event, whiteboard_event
+			return teacher_connected, student_connected, teacher_joined, student_joined, student_roster_request, teacher_roster_request, student_roster, hand_event, moderation_event, signal_event, whiteboard_event
 
 		result = async_to_sync(exercise_room)()
-		teacher_connected, student_connected, teacher_joined, student_roster_request, teacher_roster_request, student_roster, hand_event, moderation_event, signal_event, whiteboard_event = result
+		teacher_connected, student_connected, teacher_joined, student_joined, student_roster_request, teacher_roster_request, student_roster, hand_event, moderation_event, signal_event, whiteboard_event = result
 		self.assertTrue(teacher_connected)
 		self.assertTrue(student_connected)
 		self.assertEqual(teacher_joined['role'], 'teacher')
