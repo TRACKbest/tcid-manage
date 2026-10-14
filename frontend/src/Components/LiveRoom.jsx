@@ -40,6 +40,8 @@ const drawStroke = (canvas, stroke) => {
   context.stroke()
 }
 
+const WHITEBOARD_CHUNK_SIZE = 100
+
 const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) => {
   const socketRef = useRef(null)
   const localStreamRef = useRef(null)
@@ -82,10 +84,17 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   }, [boardStrokes])
 
   useEffect(() => {
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = screenStreamRef.current || localStreamRef.current
+    const video = localVideoRef.current
+    if (!video) return
+    const stream = screenStreamRef.current || localStreamRef.current
+    video.srcObject = stream
+    if (stream) {
+      video.play().catch((error) => {
+        console.error('Could not play the local camera preview:', error)
+        setMediaError('La caméra est activée, mais son aperçu ne peut pas démarrer. Rechargez la classe ou vérifiez les autorisations du navigateur.')
+      })
     }
-  }, [sharingScreen, peerId])
+  }, [cameraAvailable, sharingScreen, peerId])
 
   useEffect(() => {
     remoteVideoRefs.current.forEach((element, remotePeerId) => {
@@ -116,6 +125,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
 
         if (videoResult.status === 'fulfilled') {
           videoResult.value.getVideoTracks().forEach((track) => localStreamRef.current.addTrack(track))
+          if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current
           setCameraAvailable(true)
           setCameraEnabled(true)
         } else {
@@ -166,7 +176,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
           if (event.candidate) send({ type: 'signal', target: remotePeerId, signal: { candidate: event.candidate } })
         }
         connection.ontrack = (event) => {
-          const stream = event.streams[0]
+          const stream = event.streams[0] || new MediaStream([event.track])
           if (stream) setRemoteStreams((current) => ({ ...current, [remotePeerId]: stream }))
         }
         connection.onconnectionstatechange = () => {
@@ -456,7 +466,10 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
     if (!drawingRef.current) return
     const stroke = drawingRef.current
     drawingRef.current = null
-    sendMessage({ type: 'whiteboard', stroke })
+    for (let start = 0; start < stroke.points.length; start += WHITEBOARD_CHUNK_SIZE - 1) {
+      const points = stroke.points.slice(start, start + WHITEBOARD_CHUNK_SIZE)
+      if (points.length) sendMessage({ type: 'whiteboard', stroke: { ...stroke, points } })
+    }
   }
 
   const clearBoard = () => {

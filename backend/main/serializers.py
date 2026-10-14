@@ -12,6 +12,7 @@ class TeacherSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'is_active': {'read_only': True},
             'is_approved': {'read_only': True},
+            'skills': {'required': False, 'allow_blank': True},
             'face_url': {'required': False, 'allow_blank': True, 'allow_null': True},
             'insta_url': {'required': False, 'allow_blank': True, 'allow_null': True},
             'twit_url': {'required': False, 'allow_blank': True, 'allow_null': True},

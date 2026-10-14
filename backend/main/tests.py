@@ -284,18 +284,25 @@ class LiveClassroomWebSocketTests(TransactionTestCase):
 				'signal': {'type': 'offer', 'sdp': 'test-sdp'},
 			})
 			signal_event = await student_socket.receive_json_from(timeout=5)
+			await teacher_socket.send_json_to({
+				'type': 'whiteboard',
+				'stroke': {'color': '#00a99d', 'points': [{'x': 0.1, 'y': 0.2}, {'x': 0.3, 'y': 0.4}]},
+			})
+			whiteboard_event = await student_socket.receive_json_from(timeout=5)
 			await student_socket.disconnect()
 			await teacher_socket.disconnect()
-			return teacher_connected, student_connected, teacher_joined, hand_event, moderation_event, signal_event
+			return teacher_connected, student_connected, teacher_joined, hand_event, moderation_event, signal_event, whiteboard_event
 
 		result = async_to_sync(exercise_room)()
-		teacher_connected, student_connected, teacher_joined, hand_event, moderation_event, signal_event = result
+		teacher_connected, student_connected, teacher_joined, hand_event, moderation_event, signal_event, whiteboard_event = result
 		self.assertTrue(teacher_connected)
 		self.assertTrue(student_connected)
 		self.assertEqual(teacher_joined['role'], 'teacher')
 		self.assertEqual(hand_event['type'], 'raise_hand')
 		self.assertEqual(moderation_event['type'], 'moderate')
 		self.assertEqual(signal_event['signal']['sdp'], 'test-sdp')
+		self.assertEqual(whiteboard_event['type'], 'whiteboard')
+		self.assertEqual(whiteboard_event['stroke']['points'][1], {'x': 0.3, 'y': 0.4})
 
 
 class AIFeatureApiTests(TestCase):
@@ -570,13 +577,14 @@ class RegistrationTests(TestCase):
 			'password': 'teacher-password',
 			'qualification': 'Mathematics',
 			'mobile_no': '5551234567',
-			'skills': 'Math, Physics',
+			'skills': 'Java, Python, React, PostgreSQL',
 		}, format='multipart')
 
 		self.assertEqual(response.status_code, 201, response.data)
 		teacher = Teacher.objects.get(email='katherine@example.com')
 		self.assertFalse(teacher.is_approved)
 		self.assertFalse(teacher.is_active)
+		self.assertEqual(teacher.skills, 'Java, Python, React, PostgreSQL')
 
 
 class LoginTests(TestCase):

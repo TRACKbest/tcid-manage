@@ -25,6 +25,8 @@ const Register = () => {
         'status':''
     });
       const [profileImage, setProfileImage] = useState(null)
+      const [registrationError, setRegistrationError] = useState('')
+      const [submitting, setSubmitting] = useState(false)
 
     const handleChange=(event)=>{
         setStudentData({
@@ -38,6 +40,9 @@ const Register = () => {
     }
 
     const submitForm=async ()=>{
+        if (submitting) return
+        setSubmitting(true)
+        setRegistrationError('')
         const studentFormData=new FormData();
         studentFormData.append("fullname",studentData.fullname)
         studentFormData.append("email",studentData.email)
@@ -58,6 +63,7 @@ const Register = () => {
             interseted_categories: '',
             status: 'success'
           })
+          setRegistrationError('')
           setProfileImage(null)
           Swal.fire({
             title: 'Demande envoyée',
@@ -71,8 +77,30 @@ const Register = () => {
           })
           window.setTimeout(() => window.location.assign('/user-login'), 2500)
         } catch (error) {
-          console.error('Student registration failed:', error.response?.data || error)
+          const responseData = error.response?.data
+          const fieldLabels = {
+            fullname: 'Nom complet',
+            email: 'Adresse e-mail',
+            password: 'Mot de passe',
+            username: 'Nom d’utilisateur',
+            interseted_categories: 'Centres d’intérêt',
+            profile_img: 'Photo de profil',
+            non_field_errors: 'Inscription',
+          }
+          const fieldErrors = Object.entries(responseData || {}).flatMap(([field, messages]) => {
+            const values = Array.isArray(messages) ? messages : [messages]
+            return values
+              .filter(message => typeof message === 'string')
+              .map(message => `${fieldLabels[field] || field}: ${message}`)
+          })
+          const message = typeof responseData?.detail === 'string'
+            ? responseData.detail
+            : fieldErrors.join(' ')
+          console.error('Student registration failed:', responseData || error)
+          setRegistrationError(message || 'Impossible de créer le compte. Vérifiez votre connexion et réessayez.')
           setStudentData(currentData => ({ ...currentData, status: 'error' }))
+        } finally {
+          setSubmitting(false)
         }
     }
 
@@ -87,7 +115,7 @@ const Register = () => {
           <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION ÉTUDIANT</h5>
           </div>            
             {studentData.status === 'success' && <h3 className='text-center text-success mb-3'>Demande envoyée. Votre compte sera activé après validation par l’administrateur.</h3>}
-            {studentData.status === 'error' && <h3 className='text-center text-danger mb-3'>Une erreur est survenue. Vérifiez les informations et réessayez.</h3>}
+            {studentData.status === 'error' && <p className='text-center text-danger mb-3' role="alert">{registrationError}</p>}
               <div class="form-floating mb-3">
                 <input type="text" onChange={handleChange} name='fullname' class="form-control" id="floatingInput" placeholder="Nom complet" />
                 <label for="floatingInput">Nom complet</label>
@@ -114,7 +142,7 @@ const Register = () => {
                 <input id="student-profile-image" type="file" accept="image/*" onChange={handleFileChange} className="form-control" />
               </div>
               <div class="d-grid my-4">
-                <button onClick={submitForm} class="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="submit" >Créer mon compte</button>
+                <button onClick={submitForm} class="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="button" disabled={submitting}>{submitting ? 'Envoi en cours…' : 'Créer mon compte'}</button>
                 <hr className=''/>
                 <Link to='/user-login' class="btn btn-danger rounded-pill btn-login text-uppercase fw-bold">Déjà inscrit·e ? Connexion</Link>
               </div>

@@ -10,7 +10,7 @@ class Teacher(models.Model):
     qualification=models.CharField(max_length=500)
     mobile_no=models.CharField(max_length=20)
     profile_img=models.ImageField(upload_to='teacher_profile_imgs/',null=True)
-    skills=models.CharField(max_length=20,null=True)
+    skills=models.CharField(max_length=255,null=True,blank=True)
 
     face_url=models.URLField(null=True,blank=True)
     insta_url=models.URLField(null=True,blank=True)
