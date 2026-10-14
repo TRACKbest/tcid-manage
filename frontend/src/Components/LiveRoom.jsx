@@ -145,10 +145,18 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
       }
 
       if (disposed) return
-      const socketUrl = new URL(`/ws/live-classrooms/${classroom.id}/`, baseUrl)
-      socketUrl.protocol = socketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-      socketUrl.searchParams.set('token', joinInfo.token)
-      const socket = new WebSocket(socketUrl)
+      let socket
+      try {
+        const socketUrl = new URL(`/ws/live-classrooms/${classroom.id}/`, window.location.origin)
+        socketUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+        socketUrl.searchParams.set('token', joinInfo.token)
+        socket = new WebSocket(socketUrl.toString())
+      } catch (error) {
+        console.error('Could not create the live classroom WebSocket:', error)
+        setConnectionStatus('Erreur de connexion')
+        setMediaError('Impossible de se connecter à la classe en direct. Rechargez la page et réessayez.')
+        return
+      }
       socketRef.current = socket
       socket.onopen = () => setConnectionStatus('Connecté')
       socket.onclose = (event) => {
