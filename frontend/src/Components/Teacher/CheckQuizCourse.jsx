@@ -45,7 +45,7 @@ const CheckQuizCourse = (props) => {
         <>
             <span className='text-success'>Associé</span>
             &nbsp;
-            <Link className='btn btn-sm btn-info' to={`/attempted-students/`+props.quiz}>Étudiants ayant répondu</Link>
+            <Link className='btn btn-sm btn-info' to={`/attempted-students/`+props.quiz}>Apprenants ayant passé le quiz</Link>
         </>
         }
     </td>

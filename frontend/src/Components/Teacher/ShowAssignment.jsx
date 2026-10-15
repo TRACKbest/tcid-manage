@@ -51,7 +51,7 @@ const ShowAssignment = () => {
                         <thead>
                             <tr>
                                 <th>Titre</th>
-                                <th>Statut de l’étudiant</th>
+                                <th>Statut de l’apprenant</th>
                             </tr>
                         </thead>
                         <tbody>

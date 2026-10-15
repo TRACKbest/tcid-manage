@@ -94,7 +94,7 @@ const CourseDetail = () => {
           setEnrolledStatus(response.data.status || 'pending')
           Swal.fire({
             title: 'Demande envoyée',
-            text: 'Votre enseignant doit approuver votre accès au cours.',
+            text: 'Votre formateur doit approuver votre accès à la formation.',
             icon: 'success',
             toast: true,
             timer: 3000,
@@ -207,7 +207,7 @@ const CourseDetail = () => {
     }
 
     useEffect(() => {
-      document.title = 'TCiD Center | Détails du cours'
+      document.title = 'TCiD Center | Détails de la formation'
     }, []);
     const safeDescription = DOMPurify.sanitize(courseData.description || '')
     return (
@@ -223,11 +223,11 @@ const CourseDetail = () => {
             <div className='col-8 pd-2 mt-3'>
                 <h3>{courseData.title}</h3>
                 <div className="course-description-content" dangerouslySetInnerHTML={{ __html: safeDescription }} />
-                <p className='fw-bold'>Enseignant·e : <Link to={`/teacher-detail/${teacherData.id}`}>{teacherData.full_name}</Link></p>
+                <p className='fw-bold'>Formateur : <Link to={`/teacher-detail/${teacherData.id}`}>{teacherData.full_name}</Link></p>
                 <p className='fw-bold'>Mots-clés :&nbsp;
                   <span className='text-warning'>{courseData.techs}</span>
                 </p>
-                <p className='fw-bold'>Étudiants inscrits &nbsp;<i class="bi bi-person-plus-fill text-info"></i> :&nbsp;{courseData.total_enrolled_students}</p> 
+                <p className='fw-bold'>Apprenants inscrits &nbsp;<i class="bi bi-person-plus-fill text-info"></i> :&nbsp;{courseData.total_enrolled_students}</p> 
                 <p className='fw-bold'>
                 Note : {avgRating} / 5
                 {enrolledStatus === 'approved' && userLoginStatus === 'success' &&
@@ -236,7 +236,7 @@ const CourseDetail = () => {
                   <button className='btn btn-success btn-sm ms-2' onClick={() => { setRatingError(''); setRatingModalOpen(true) }} type="button">Évaluer</button>
                 }
                 {ratingStatus === 'success' && 
-                  <span className='btn btn-success btn-sm ms-2 rounded-pill mt-2' >Vous avez déjà évalué ce cours</span>   
+                  <span className='btn btn-success btn-sm ms-2 rounded-pill mt-2' >Vous avez déjà noté cette formation</span>   
                 }
                   </>
                 }  
@@ -281,13 +281,13 @@ const CourseDetail = () => {
                     Consultations : {courseViews}
                 </p>
                 {userLoginStatus === 'success' && enrolledStatus !== 'approved' && enrolledStatus !== 'pending' &&
-                  <p><button type='button' className='btn btn-success rounded-pill ' onClick={enrollCourse}>Demander l’accès au cours</button></p>
+                  <p><button type='button' className='btn btn-success rounded-pill ' onClick={enrollCourse}>Demander l’accès à la formation</button></p>
                 }
                 {enrolledStatus === 'pending' && userLoginStatus === 'success' &&
                   <p><span className='btn btn-warning rounded-pill btn-sm'>Demande en attente d’approbation</span></p>
                 }
                 {enrolledStatus === 'approved' && userLoginStatus === 'success' &&
-                  <p><span className='btn btn-info rounded-pill btn-sm'>Accès au cours approuvé</span></p>
+                  <p><span className='btn btn-info rounded-pill btn-sm'>Accès à la formation approuvé</span></p>
                 }
                 {userLoginStatus === 'success' && favoriteStatus !== 'success' &&
                   <p><button type='button' onClick={markAsFav} title="Ajouter aux favoris" aria-label="Ajouter aux favoris" className='btn btn-outline-danger btn-sm'><i className='bi bi-heart'></i></button></p>
@@ -296,7 +296,7 @@ const CourseDetail = () => {
                   <p><button type='button' onClick={removeFav} title="Retirer des favoris" aria-label="Retirer des favoris" className='btn btn-danger btn-sm'><i className='bi bi-heart-fill'></i></button></p>
                 }
                 {userLoginStatus !== 'success' && 
-                    <p><Link to='/user-login' className='btn btn-danger rounded-pill'>Connectez-vous pour accéder à ce cours</Link></p>
+                    <p><Link to='/user-login' className='btn btn-danger rounded-pill'>Connectez-vous pour accéder à cette formation</Link></p>
                 }
             </div>
         </div>
@@ -305,7 +305,7 @@ const CourseDetail = () => {
       <>
         <div className="card mt-4">
             <h5 className="card-header">
-                Contenu du cours
+                Contenu de la formation
             </h5>
             <ul className="list-group list-group-flush">
             {chapterData.map((chapter,index) => (
@@ -315,10 +315,10 @@ const CourseDetail = () => {
             </ul>
         </div>
         <Link to={`/mini/${courseData.id}`} className='btn btn-sm bg-success mt-2 text-white'>Commencer</Link>
-        <Link to={`/user/study-material/${courseData.id}`} className='btn btn-sm btn-primary mt-2 ms-2'>Documents du cours</Link>
+        <Link to={`/user/study-material/${courseData.id}`} className='btn btn-sm btn-primary mt-2 ms-2'>Documents de la formation</Link>
       </>
       }
-        <h3 className=' pb-1 mb-4 mt-5'>Cours similaires</h3>
+        <h3 className=' pb-1 mb-4 mt-5'>Formations similaires</h3>
       <div className='row mb-4'>
       {relatedCourseData.map((rcourse,index) =>
         <div className='col-md-3 mb-4'>

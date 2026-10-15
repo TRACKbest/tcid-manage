@@ -37,7 +37,7 @@ test('opens the teacher account menu without Bootstrap JavaScript', () => {
     </MemoryRouter>,
   );
 
-  fireEvent.click(screen.getByRole('button', { name: /Enseignant/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Formateur/ }));
   expect(screen.getAllByRole('link', { name: /Inscription/ })[0]).toHaveAttribute('href', '/teacher-register');
   expect(screen.getAllByRole('link', { name: /Connexion/ })[0]).toHaveAttribute('href', '/teacher-login');
   expect(screen.queryByText('Administration')).not.toBeInTheDocument();

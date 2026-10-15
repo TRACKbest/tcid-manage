@@ -9,7 +9,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const TeacherDashboard = () => {
   useEffect(()=>{
-    document.title='TCiD Center | Tableau de bord enseignant'
+    document.title='TCiD Center | Tableau de bord formateur'
   })
 
   useEffect(() => {
@@ -41,7 +41,7 @@ const TeacherDashboard = () => {
                   <h4>Tableau de bord</h4>
                   <div className='col-md-4 mt-3'>
                     <div className='card border-primary'>
-                      <h5 className='card-header bg-warning text-white'>Nombre de cours</h5>
+                      <h5 className='card-header bg-warning text-white'>Total des formations</h5>
                       <div className='card-body'>
                         <h3><Link to="/teacher-my-course" className='text-warning'>{dashbarData.total_teacher_course} <i class="bi bi-journals text-warning"></i></Link></h3>
                       </div>
@@ -49,7 +49,7 @@ const TeacherDashboard = () => {
                   </div>
                   <div className='col-md-4 mt-3'>
                     <div className='card border-primary'>
-                      <h5 className='card-header bg-success text-white'>Nombre d’étudiants</h5>
+                      <h5 className='card-header bg-success text-white'>Total des apprenants</h5>
                       <div className='card-body'>
                         <h3><Link to="/my-users" className='text-success'>{dashbarData.total_teacher_students} <i class="bi bi-people-fill"></i></Link></h3>
                       </div>

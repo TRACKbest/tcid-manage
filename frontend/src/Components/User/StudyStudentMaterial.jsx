@@ -21,7 +21,7 @@ const StudyStudentMaterial = () => {
 
     useEffect(()=>{
             if (!studentId) {
-                    setErrorMsg('Connectez-vous comme étudiant pour consulter les documents.')
+                    setErrorMsg('Connectez-vous comme apprenant pour consulter les documents.')
                     setIsLoading(false)
                     return
       }
@@ -33,8 +33,8 @@ const StudyStudentMaterial = () => {
                     .catch((error)=>{
                         console.error('Could not load course documents:', error.response?.data || error)
                         setErrorMsg(error.response?.status === 403
-                                ? 'Votre demande doit être approuvée par l’enseignant avant de consulter les documents.'
-                                : 'Impossible de charger les documents du cours.')
+                                ? 'Votre demande doit être approuvée par le formateur avant de consulter les documents.'
+                                : 'Impossible de charger les documents de la formation.')
                     })
                     .finally(()=>setIsLoading(false))
         },[course_id, studentId]);
@@ -66,22 +66,22 @@ const StudyStudentMaterial = () => {
         </aside>
         <section className='col-md-9'>
             <div className='card'>
-                <h5 className='card-header'>Documents du cours ({totalResult})</h5>
+                <h5 className='card-header'>Documents de la formation ({totalResult})</h5>
                 <div className='card-body table-responsive'>
                     {errorMsg && <div className="alert alert-danger" role="alert">{errorMsg}</div>}
                     {isLoading && <p role="status">Chargement des documents...</p>}
                     <table className='table table-bordered'>
                         <thead>
                             <tr>
-                                <th>Title</th>
-                                <th>Details</th>
+                                <th>Titre</th>
+                                <th>Détails</th>
                                 <th>Document</th>
-                                <th>Remarks</th>
+                                <th>Remarques</th>
                                 <th>Résumé IA</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {!isLoading && !errorMsg && studyData.length === 0 && <tr><td colSpan="5">Aucun document disponible pour ce cours.</td></tr>}
+                            {!isLoading && !errorMsg && studyData.length === 0 && <tr><td colSpan="5">Aucun document disponible pour cette formation.</td></tr>}
                             {studyData.map((row,index) => 
                             <tr key={row.id}>
                                 <td>{row.title}</td>

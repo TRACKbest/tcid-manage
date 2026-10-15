@@ -24,7 +24,7 @@ const FavoriteCourses = () => {
     },[studentId]);
 
     useEffect(()=>{
-        document.title='TCiD Center | Cours favoris'
+        document.title='TCiD Center | Formations favorites'
       })
   return (
     <div className='container mt-4'>
@@ -34,14 +34,14 @@ const FavoriteCourses = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-heart-fill text-danger"></i> Cours favoris</h5>
+                    <h5 className='card-header'><i class="bi bi-heart-fill text-danger"></i> Formations favorites</h5>
                     <div className='card-body table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>
                                 <tr>
                                     <th className='text-center'>Illustration</th>
-                                    <th className='text-center'>Cours</th>
-                                    <th className='text-center'>Enseignant</th>
+                                    <th className='text-center'>Formation</th>
+                                    <th className='text-center'>Formateur</th>
                                 </tr>
                             </thead>
                             <tbody>

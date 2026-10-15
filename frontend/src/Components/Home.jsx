@@ -86,7 +86,7 @@ try{
     <div class="text">
       <h1 className='head'>Apprenez sans cesse.<br/>Progressez chaque jour.</h1>
       <h1 className='headss'>Apprenez avec nous !</h1>
-      <p className='para'>Apprenez auprès d’enseignants expérimentés.<br/>Découvrez les dernières tendances technologiques.</p>
+      <p className='para'>Apprenez auprès des meilleurs formateurs. Maîtrisez les dernières tendances technologiques.</p>
     </div>
     </section>
       {/*  End Background video player*/}
@@ -98,7 +98,7 @@ try{
                     <div class="service-item text-center pt-3">
                         <div class="p-4">
                             <i class="fa fa-3x fa-graduation-cap text-primary mb-4"></i>
-                            <h5 class="mb-3">Des enseignants qualifiés</h5>
+                            <h5 class="mb-3">Formateurs qualifiés</h5>
                             <p>Un proverbe dit : <br/>« Si vous prévoyez pour un an, semez du riz ; pour dix ans, plantez des arbres ; pour toute une vie, instruisez les personnes. »</p>
                         </div>
                     </div>
@@ -107,7 +107,7 @@ try{
                     <div class="service-item text-center pt-3">
                         <div class="p-4">
                             <i class="fa fa-3x fa-globe text-primary mb-4"></i>
-                            <h5 class="mb-3">Des cours en ligne</h5>
+                            <h5 class="mb-3">Formations en ligne</h5>
                             <p>Pour apprendre efficacement, il faut rester engagé : lire, écouter, écrire, observer des démonstrations et mettre ses connaissances en pratique.</p>
                         </div>
                     </div>
@@ -117,7 +117,7 @@ try{
                         <div class="p-4">
                             <i class="fa fa-3x fa-home text-primary mb-4"></i>
                             <h5 class="mb-3">Des exercices pratiques</h5>
-                            <p>Préparez votre avenir grâce à des exercices de qualité, conçus par les enseignants et couvrant les notions essentielles de chaque cours.</p>
+                            <p>Préparez votre avenir grâce à des exercices de qualité, conçus par les formateurs et couvrant les notions essentielles de chaque formation.</p>
                         </div>
                     </div>
                 </div>
@@ -126,7 +126,7 @@ try{
                         <div class="p-4">
                             <i class="fa fa-3x fa-book-open text-primary mb-4"></i>
                             <h5 class="mb-3">Des ressources pédagogiques</h5>
-                            <p>Appuyez-vous sur des ressources de qualité et les conseils de vos enseignants pour atteindre vos objectifs et préparer vos examens.</p>
+                            <p>Appuyez-vous sur des ressources de qualité et les conseils de vos formateurs pour atteindre vos objectifs et préparer vos examens.</p>
                         </div>
                     </div>
                 </div>
@@ -149,19 +149,19 @@ try{
                     </div>
                 </div>
                 <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.3s">
-                    <h6 class="section-title bg-white text-start text-primary pe-3">À propos</h6>
-                    <h1 class="mb-4">Bienvenue au TCiD Center</h1>
-                    <p class="mb-4">Les étudiants apprennent mieux lorsqu’ils échangent, réfléchissent à ce qu’ils découvrent, font le lien avec leurs expériences et mettent leurs connaissances en pratique. L’apprentissage prend tout son sens lorsqu’il s’intègre à leur quotidien.</p>
-                    <p class="mb-4">Au TCiD Center, nous créons des cours en ligne stimulants qui donnent envie d’apprendre, de développer de nouvelles compétences et de progresser.</p>
+                    <h6 class="section-title bg-white text-start text-primary pe-3">À propos de nous</h6>
+                    <h1 class="mb-4">Bienvenue à TCiD Center</h1>
+                    <p class="mb-4">Les apprenants apprennent mieux lorsqu’ils échangent, réfléchissent à ce qu’ils découvrent, font le lien avec leurs expériences et mettent leurs connaissances en pratique. L’apprentissage prend tout son sens lorsqu’il s’intègre à leur quotidien.</p>
+                    <p class="mb-4">Au TCiD Center, nous créons des formations en ligne stimulantes qui donnent envie d’apprendre, de développer de nouvelles compétences et de progresser.</p>
                     <div class="row gy-2 gx-4 mb-4"> 
                         <div class="col-sm-6">
-                            <p class="mb-0"><i class="fa fa-arrow-right text-primary me-2"></i>Enseignants qualifiés</p>
+                            <p class="mb-0"><i class="fa fa-arrow-right text-primary me-2"></i>Formateurs qualifiés</p>
                         </div>
                         <div class="col-sm-6">
-                            <p class="mb-0"><i class="fa fa-arrow-right text-primary me-2"></i>Cours en ligne</p>
+                            <p class="mb-0"><i class="fa fa-arrow-right text-primary me-2"></i>Formations en ligne</p>
                         </div>
                         <div class="col-sm-6">
-                            <p class="mb-0"><i class="fa fa-arrow-right text-primary me-2"></i>Échangez avec les enseignants</p>
+                            <p class="mb-0"><i class="fa fa-arrow-right text-primary me-2"></i>Échanger avec les formateurs</p>
                         </div>
                         <div class="col-sm-6">
                             <p class="mb-0"><i class="fa fa-arrow-right text-primary me-2"></i>Ressources pédagogiques</p>
@@ -189,8 +189,8 @@ try{
     <div class="container-xxl py-5">
         <div class="container">
             <div class="text-center wow fadeInUp">
-                <h6 class="section-title bg-white text-center text-primary px-3">Cours</h6>
-                <h1 class="mb-5">Cours récents</h1>
+                <h6 class="section-title bg-white text-center text-primary px-3">Formations</h6>
+                <h1 class="mb-5">Dernières formations</h1>
             </div>
             <div class="row g-4 justify-content-center">
             {courseData && courseData.map((course,index) =>
@@ -211,15 +211,15 @@ try{
         </div>
     </div>
     <div class="text-center">
-    <button type="button" class="btn btn-primary border border-primary"><Link to='/all-courses'className='text-white' >Voir tous les cours</Link></button>
+    <button type="button" class="btn btn-primary border border-primary"><Link to='/all-courses'className='text-white' >Voir toutes les formations</Link></button>
     </div>
       {/* ENd Latest Courses*/}
       {/* popular Courses*/}
     <div class="container-xxl py-5">
         <div class="container">
             <div class="text-center wow fadeInUp">
-                <h6 class="section-title bg-white text-center text-primary px-3">Cours</h6>
-                <h1 class="mb-5">Cours populaires</h1>
+                <h6 class="section-title bg-white text-center text-primary px-3">Formations</h6>
+                <h1 class="mb-5">Formations populaires</h1>
             </div>
             <div class="row g-4 justify-content-center">
             {popularcourseData && popularcourseData.map((row,index)=>
@@ -243,15 +243,15 @@ try{
         </div>
     </div>
     <div class="text-center">
-    <button type="button" class="btn btn-primary border border-primary"><Link to='/popular-courses' className='text-white'>Voir les cours populaires</Link></button>
+    <button type="button" class="btn btn-primary border border-primary"><Link to='/popular-courses' className='text-white'>Voir les formations populaires</Link></button>
     </div>
       {/* ENd Popular Courses*/}
       {/* Popular Teacher */}
     <div class="container-xxl py-5">
         <div class="container">
             <div class="text-center wow fadeInUp">
-                <h6 class="section-title bg-white text-center text-primary px-3">Enseignants</h6>
-                <h1 class="mb-5">Enseignants populaires</h1>
+                <h6 class="section-title bg-white text-center text-primary px-3">Formateurs</h6>
+                <h1 class="mb-5">Formateurs populaires</h1>
             </div>
             <div class="row g-4">
             {popularteacherData && popularteacherData.map((teacher,index)=>
@@ -287,7 +287,7 @@ try{
       {/* Student Testimonial */}
     <div class="text-center wow fadeInUp">
                 <h6 class="section-title bg-white text-center text-primary px-3">Leurs avis</h6>
-                <h1 class="mb-5">Témoignages d’étudiants</h1>
+                <h1 class="mb-5">Témoignages d’apprenants</h1>
         </div>
     <div>
       <Carousel

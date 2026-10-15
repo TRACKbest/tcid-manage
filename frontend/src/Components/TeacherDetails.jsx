@@ -20,7 +20,7 @@ const TeacherDetails = () => {
       }, [])
 
     useEffect(()=>{
-        document.title='TCiD Center | Profil enseignant'
+        document.title='TCiD Center | Détails du formateur'
       })
 
       useEffect(()=>{
@@ -59,8 +59,8 @@ const TeacherDetails = () => {
                     <span to={`/teacher-skill-courses/${skill.trim()}/${teacherData.id}`} className='badge badge-pill rounded-pill bg-warning text-secoundary ms-1'>{skill.trim()}</span>
                 )}   
                 </p>              
-                <p className='fw-bold'>Nombre de cours : {teacherData.total_teacher_course}</p>
-                <p className='fw-bold'>Contacter l’enseignant·e : {teacherData.email}</p>
+                <p className='fw-bold'>Nombre de formations : {teacherData.total_teacher_course}</p>
+                <p className='fw-bold'>Contacter le formateur : {teacherData.email}</p>
                 <p className='fw-bold'>Qualifications : {teacherData.qualification}</p>
                 <p className='fw-bold '> Suivre : <br/>
                 {teacherData.face_url &&
@@ -85,7 +85,7 @@ const TeacherDetails = () => {
         {/* Course Videos*/}
         <div className="card mt-4">
             <div className="card-header">
-                <h4>Cours de l’enseignant</h4>
+                <h4>Liste des formations</h4>
                 <div className='list-group list-group-flush'>
                     {courseData.map((course,index)=>
                         <Link to={`/detail/${course.id}`} class="list-group-item">{course.title}</Link>

@@ -10,7 +10,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const EditCourse = () => {
     useEffect(()=>{
-        document.title='TCiD Center | Modifier un cours'
+        document.title='TCiD Center | Modifier une formation'
       })
 
       const [cats,setCats]=useState([])
@@ -88,7 +88,7 @@ const EditCourse = () => {
             .then((res)=>{
                 if(res.status === 200){
                     Swal.fire({
-                        title:'Cours modifié avec succès',
+                        title:'Formation modifiée avec succès',
                         icon:'success',
                         toast:true,
                         timer:3000,
@@ -111,7 +111,7 @@ const EditCourse = () => {
         </aside>
         <section className='col-md-9'>
             <div className='card'>
-                <h3 className='card-header'>Modifier le cours</h3>
+                <h3 className='card-header'>Modifier la formation</h3>
                 <div className='card-body'>
                 <div className="mb-3">
                         <label for="title" className="form-label">Catégorie</label>

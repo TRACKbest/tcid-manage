@@ -17,7 +17,7 @@ const MyUsers = () => {
     const handledNotificationRef = useRef('')
 
     useEffect(()=>{
-        document.title='TCiD Center | Étudiants inscrits'
+        document.title='TCiD Center | Apprenants inscrits'
       })
 
       const [studentData, setStudentData]=useState([]);
@@ -28,7 +28,7 @@ const MyUsers = () => {
 
       useEffect(()=>{
         if (!teacherId) {
-        setPageErrorMsg('Connectez-vous comme enseignant pour afficher vos étudiants.')
+        setPageErrorMsg('Connectez-vous comme formateur pour afficher vos apprenants.')
             setIsLoading(false)
             return
         }
@@ -36,7 +36,7 @@ const MyUsers = () => {
             .then((response)=>setStudentData(response.data))
             .catch((error)=>{
                 console.error('Could not load enrolled students:', error.response?.data || error)
-                setPageErrorMsg('Impossible de charger les étudiants inscrits. Vérifiez que le serveur Django est démarré.')
+                setPageErrorMsg('Impossible de charger les apprenants inscrits. Vérifiez que le serveur Django est démarré.')
             })
             .finally(()=>setIsLoading(false))
       },[teacherId]);
@@ -105,7 +105,7 @@ const MyUsers = () => {
                 row.id === enrollmentId ? { ...row, status: 'approved' } : row
             ))
             setPageErrorMsg('')
-            setApprovalMessage('Demande approuvée. L’étudiant peut maintenant accéder aux documents du cours.')
+            setApprovalMessage('Demande approuvée. L’apprenant peut maintenant accéder aux documents de la formation.')
         } catch (error) {
             console.error('Could not approve enrollment:', error.response?.data || error)
             setPageErrorMsg('Impossible d’approuver cette demande.')
@@ -143,7 +143,7 @@ const MyUsers = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-people-fill"> </i>Demandes et étudiants inscrits
+                    <h5 className='card-header'><i class="bi bi-people-fill"> </i>Demandes et apprenants inscrits
                     {pendingCount > 0 && <button type="button" className="btn btn-success btn-sm float-end" onClick={approveAllStudents}><i className="bi bi-check2-all" aria-hidden="true"></i> Approuver tout ({pendingCount})</button>}
                     <Link to="/groups" className="btn btn-primary btn-sm float-end">
                         <i className="bi bi-chat-square-text" aria-hidden="true"></i> Mes groupes
@@ -152,13 +152,13 @@ const MyUsers = () => {
                     <div className='card-body' class="table-responsive">
                         {pageErrorMsg && <div className="alert alert-danger" role="alert">{pageErrorMsg}</div>}
                         {approvalMessage && <div className="alert alert-success" role="status">{approvalMessage}</div>}
-                        {isLoading && <p role="status">Chargement des étudiants…</p>}
+                        {isLoading && <p role="status">Chargement des apprenants…</p>}
                         <table className='table table-striped table-hover'>
                             <thead>
                                 <tr>
                                     <th className='text-center'>Profil</th>
-                                    <th className='text-center'>Étudiant</th>
-                                    <th className='text-center'>Cours suivi</th>
+                                    <th className='text-center'>Apprenant</th>
+                                    <th className='text-center'>Formation suivie</th>
                                     <th className='text-center'>Statut</th>
                                     <th className='text-center'>Action</th>
                                 </tr>
@@ -168,7 +168,7 @@ const MyUsers = () => {
                                 {studentData.map((row,index) => 
                                     <tr id={`enrollment-row-${row.id}`} key={`${row.course.id}-${row.student.id}`}>
                                     <td className='text-center'>
-                                        <img className='imgmeet' src={row.student.profile_img || '/img/default-profile.png'} alt={row.student.fullname || 'Profil étudiant'} />
+                                        <img className='imgmeet' src={row.student.profile_img || '/img/default-profile.png'} alt={row.student.fullname || 'Profil apprenant'} />
                                     </td>
                                     <td className='text-center'>{row.student.username}</td>
                                     <td className='text-center'>{row.course.title}</td>
@@ -188,7 +188,7 @@ const MyUsers = () => {
                                                     <div className="modal-header">
                                                         <div className="modal-title chat-contact" id="exampleModalLabel">
                                                             {row.student.profile_img ? <img className="chat-contact-avatar" src={row.student.profile_img} alt="" /> : <span className="chat-contact-avatar chat-contact-avatar--fallback" aria-hidden="true">{row.student.fullname?.charAt(0)}</span>}
-                                                            <div><h5 className="mb-0">{row.student.fullname}</h5><small className="text-muted">Étudiant</small></div>
+                                                            <div><h5 className="mb-0">{row.student.fullname}</h5><small className="text-muted">Apprenant</small></div>
                                                         </div>
                                                         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>

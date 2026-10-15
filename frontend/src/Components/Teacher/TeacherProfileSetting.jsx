@@ -35,7 +35,7 @@ const TeacherProfileSetting = () => {
 
     useEffect(()=>{
         if (!teacherId) {
-            setErrorMsg('Connectez-vous comme enseignant pour modifier votre profil.')
+            setErrorMsg('Connectez-vous comme formateur pour modifier votre profil.')
             return
         }
         axios.get(`${baseUrl}/teacher/${teacherId}/`)
@@ -71,7 +71,7 @@ const TeacherProfileSetting = () => {
 
     const submitForm=async ()=>{
         if (!teacherId) {
-            setErrorMsg('Connectez-vous comme enseignant pour modifier votre profil.')
+            setErrorMsg('Connectez-vous comme formateur pour modifier votre profil.')
             return
         }
         const teacherFormData=new FormData();

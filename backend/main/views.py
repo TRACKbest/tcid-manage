@@ -186,7 +186,7 @@ class StudentEnrollCourseList(generics.ListCreateAPIView):
             models.Notification.objects.create(
                 teacher=enrollment.course.teacher,
                 subject='Nouvelle demande d’inscription',
-                message=f'{enrollment.student.fullname} demande l’accès à {enrollment.course.title}.',
+                message=f'{enrollment.student.fullname} demande l’accès à la formation {enrollment.course.title}.',
                 link=f'/my-users?request_id={enrollment.id}',
             )
         response_serializer = self.get_serializer(enrollment)
@@ -209,7 +209,7 @@ def approve_enrollment(request, teacher_id, enrollment_id):
     models.Notification.objects.create(
         student=enrollment.student,
         subject='Demande approuvée',
-        message=f'Votre accès au cours {enrollment.course.title} est approuvé.',
+        message=f'Votre accès à la formation {enrollment.course.title} est approuvé.',
         link=f'/detail/{enrollment.course_id}',
     )
     return JsonResponse({'id': enrollment.id, 'status': enrollment.status})
@@ -228,7 +228,7 @@ def approve_all_enrollments(request, teacher_id):
             models.Notification.objects.create(
                 student=enrollment.student,
                 subject='Demande approuvée',
-                message=f'Votre accès au cours {enrollment.course.title} est approuvé.',
+                message=f'Votre accès à la formation {enrollment.course.title} est approuvé.',
                 link=f'/detail/{enrollment.course_id}',
             )
         approved_count = models.StudentCourseEnrollment.objects.filter(
@@ -535,21 +535,21 @@ class StudyMaterialList(generics.ListCreateAPIView):
                 status=models.StudentCourseEnrollment.STATUS_APPROVED,
             ).exists()
             if not is_approved:
-                raise PermissionDenied('Teacher approval is required to access course materials.')
+                raise PermissionDenied('L’approbation du formateur est nécessaire pour accéder aux supports de formation.')
             for extension in VIDEO_FILE_EXTENSIONS:
                 queryset = queryset.exclude(upload__iendswith=extension)
             return queryset
 
         teacher_id = self.kwargs.get('teacher_id')
         if not teacher_id or course.teacher_id != teacher_id:
-            raise PermissionDenied('Only the course teacher can manage these materials.')
+            raise PermissionDenied('Seul le formateur de la formation peut gérer ces supports.')
         return queryset
 
     def perform_create(self, serializer):
         course = serializer.validated_data['course']
         teacher_id = self.kwargs.get('teacher_id')
         if not teacher_id or course.teacher_id != teacher_id:
-            raise PermissionDenied('Only the course teacher can add materials.')
+            raise PermissionDenied('Seul le formateur de la formation peut ajouter des supports.')
         material = serializer.save()
         material.extracted_text = extract_material_text(material)
         material.save(update_fields=['extracted_text'])

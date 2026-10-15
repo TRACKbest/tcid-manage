@@ -61,7 +61,7 @@ const Login = () => {
     }
 
     useEffect(()=>{
-        document.title='TCiD Center | Connexion étudiant'
+        document.title='TCiD Center | Connexion apprenant'
       })
 
   return (
@@ -72,7 +72,7 @@ const Login = () => {
         <div class="card border-0 shadow rounded-3 my-5">
           <div class="card-body p-4 p-sm-5">
           <div class="text-center wow fadeInUp">
-          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark">CONNEXION ÉTUDIANT</h5>
+          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark">CONNEXION APPRENANT</h5>
           </div>            
             {errorMsg && <p className='text-danger'>{errorMsg}</p>}
               <div class="form-floating mb-3">

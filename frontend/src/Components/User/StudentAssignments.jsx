@@ -76,7 +76,7 @@ const StudentAssignments = () => {
                                 <tr>
                                     <th>Titre</th>
                                     <th>Consignes</th>
-                                    <th>Enseignant</th>
+                                    <th>Formateur</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>

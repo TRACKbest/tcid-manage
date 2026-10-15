@@ -66,8 +66,8 @@ const AiLearningTools = ({ courseId, studentId }) => {
         <div className="ai-learning-mark"><i className="bi bi-stars" aria-hidden="true" /></div>
         <div>
           <p className="ai-learning-eyebrow">ASSISTANCE PÉDAGOGIQUE</p>
-          <h2 id="ai-learning-title">Votre assistant de cours</h2>
-          <p>Réponses courtes basées sur les documents du cours.</p>
+          <h2 id="ai-learning-title">Votre assistant de formation</h2>
+          <p>Réponses courtes basées sur les documents de la formation.</p>
         </div>
       </header>
 
@@ -98,14 +98,14 @@ const AiLearningTools = ({ courseId, studentId }) => {
         <>
           <div className="ai-tutor-history" aria-live="polite">
             {messages.length === 0 && (
-              <p className="ai-learning-empty">Posez une question sur une notion de ce cours.</p>
+              <p className="ai-learning-empty">Posez une question sur une notion de cette formation.</p>
             )}
             {messages.map((message) => (
               <article className="ai-tutor-turn" key={message.id}>
                 <p className="ai-tutor-question"><span>Vous</span>{message.question}</p>
                 <div className="ai-tutor-response">
                   <span className="ai-tutor-label"><i className="bi bi-stars" aria-hidden="true" /> Tuteur</span>
-                  <p>{message.pending ? 'Recherche dans les ressources du cours…' : message.answer}</p>
+                  <p>{message.pending ? 'Recherche dans les ressources de la formation…' : message.answer}</p>
                   {message.cached && <small>Réponse réutilisée depuis le cache</small>}
                   {message.sources?.length > 0 && <small>Sources : {message.sources.join(', ')}</small>}
                 </div>
@@ -130,7 +130,7 @@ const AiLearningTools = ({ courseId, studentId }) => {
         </>
       ) : (
         <form className="ai-feedback-form" onSubmit={requestFeedback}>
-          <label htmlFor="ai-feedback-question">Question du cours</label>
+          <label htmlFor="ai-feedback-question">Question sur la formation</label>
           <input
             id="ai-feedback-question"
             maxLength="1000"

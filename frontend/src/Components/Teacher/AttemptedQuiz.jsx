@@ -36,7 +36,7 @@ const AttemptedQuiz = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'>Liste des étudiants</h5>
+                    <h5 className='card-header'>Liste des apprenants</h5>
                     <div className='card-body'>
                         <table className='table table-bordered'>
                             <thead>

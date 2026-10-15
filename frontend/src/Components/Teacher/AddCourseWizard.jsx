@@ -36,7 +36,7 @@ const AddCourseWizard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    document.title = 'TCiD Center | Créer un cours'
+    document.title = 'TCiD Center | Créer une formation'
     window.scrollTo(0, 0)
   }, [])
 
@@ -96,12 +96,12 @@ const AddCourseWizard = () => {
   const submitCourse = async (skipDescription = false) => {
     const teacherId = localStorage.getItem('teacherId')
     if (!teacherId) {
-      setErrorMsg('Connectez-vous avec un compte enseignant avant de créer un cours.')
+      setErrorMsg('Connectez-vous avec un compte formateur avant de créer une formation.')
       return
     }
     if (!courseData.category || !courseData.title.trim() || !courseData.f_img) {
       setStep(1)
-      setErrorMsg('Le titre, la catégorie et l’image du cours sont obligatoires.')
+      setErrorMsg('Le titre, la catégorie et l’image de la formation sont obligatoires.')
       return
     }
 
@@ -141,7 +141,7 @@ const AddCourseWizard = () => {
         setUploadedPdfKeys((current) => [...current, fileKey(file)])
       }
 
-      setSuccessMsg(`Cours créé${pendingFiles.length ? ` avec ${pendingFiles.length} document${pendingFiles.length === 1 ? '' : 's'} PDF` : ''}. Il est maintenant visible sur le site.`)
+      setSuccessMsg(`Formation créée${pendingFiles.length ? ` avec ${pendingFiles.length} document${pendingFiles.length === 1 ? '' : 's'} PDF` : ''}. Elle est maintenant visible sur le site.`)
       setCourseData({ category: courseData.category, title: '', f_img: null, techs: '', description: '' })
       setPdfFiles([])
       setUploadedPdfKeys([])
@@ -151,12 +151,12 @@ const AddCourseWizard = () => {
     } catch (error) {
       console.error('Could not create course:', error.response?.data || error)
       if (courseWasCreated) {
-        setErrorMsg(`Le cours n°${createdCourseId || 'nouveau'} est créé, mais un document n’a pas pu être envoyé. Revenez à l’étape 2 pour réessayer.`)
+        setErrorMsg(`La formation n°${createdCourseId || 'nouvelle'} est créée, mais un document n’a pas pu être envoyé. Revenez à l’étape 2 pour réessayer.`)
         setStep(2)
       } else {
         setErrorMsg(error.response?.data
           ? JSON.stringify(error.response.data)
-          : 'Impossible de créer le cours. Vérifiez la connexion au serveur Django.')
+          : 'Impossible de créer la formation. Vérifiez la connexion au serveur Django.')
       }
     } finally {
       setIsSubmitting(false)
@@ -172,11 +172,11 @@ const AddCourseWizard = () => {
         <section className="col-md-9">
           <div className="card course-wizard-card">
             <header className="card-header course-wizard-header">
-              <div><p className="course-wizard-kicker">ESPACE ENSEIGNANT</p><h1>Créer un cours</h1></div>
+              <div><p className="course-wizard-kicker">ESPACE FORMATEUR</p><h1>Créer une formation</h1></div>
               <span className="course-wizard-count">Étape {step} sur 3</span>
             </header>
             <div className="card-body course-wizard-body">
-              <ol className="course-wizard-steps" aria-label="Étapes de création du cours">
+              <ol className="course-wizard-steps" aria-label="Étapes de création de la formation">
                 {['Informations', 'Documents PDF', 'Présentation'].map((label, index) => {
                   const stepNumber = index + 1
                   return <li className={stepNumber === step ? 'is-current' : stepNumber < step ? 'is-complete' : ''} key={label}>
@@ -189,7 +189,7 @@ const AddCourseWizard = () => {
               {successMsg && <div className="alert alert-success" role="status">{successMsg}</div>}
 
               {step === 1 && <section className="course-wizard-step">
-                <div className="course-wizard-step-heading"><div><p className="course-wizard-kicker">OBLIGATOIRE</p><h2>Informations du cours</h2></div></div>
+                <div className="course-wizard-step-heading"><div><p className="course-wizard-kicker">OBLIGATOIRE</p><h2>Informations sur la formation</h2></div></div>
                 <div className="mb-3">
                   <label htmlFor="course-category" className="form-label">Catégorie</label>
                   <select id="course-category" name="category" value={courseData.category} onChange={handleChange} className="form-select" disabled={!categories.length}>
@@ -198,11 +198,11 @@ const AddCourseWizard = () => {
                   {!categories.length && <p className="form-text">Aucune catégorie disponible.</p>}
                 </div>
                 <div className="mb-3">
-                  <label htmlFor="course-title" className="form-label">Titre du cours</label>
+                  <label htmlFor="course-title" className="form-label">Titre de la formation</label>
                   <input id="course-title" name="title" value={courseData.title} onChange={handleChange} className="form-control" required maxLength={150} />
                 </div>
                 <div className="mb-3">
-                  <label htmlFor="course-image" className="form-label">Image du cours</label>
+                  <label htmlFor="course-image" className="form-label">Image de la formation</label>
                   <input id="course-image" type="file" accept="image/*" onChange={handleImageChange} className="form-control" required={!courseData.f_img} />
                   {courseData.f_img && <span className="course-wizard-file">{courseData.f_img.name}</span>}
                 </div>
@@ -214,7 +214,7 @@ const AddCourseWizard = () => {
               </section>}
 
               {step === 2 && <section className="course-wizard-step">
-                <div className="course-wizard-step-heading"><div><p className="course-wizard-kicker">FACULTATIF</p><h2>Documents PDF</h2><p>Ajoutez un ou plusieurs documents à télécharger avec le cours.</p></div></div>
+                <div className="course-wizard-step-heading"><div><p className="course-wizard-kicker">FACULTATIF</p><h2>Documents PDF</h2><p>Ajoutez un ou plusieurs documents à télécharger avec la formation.</p></div></div>
                 <div className="course-pdf-dropzone">
                   <label htmlFor="course-pdfs" className="form-label">Choisir des fichiers PDF</label>
                   <input id="course-pdfs" type="file" accept="application/pdf,.pdf" multiple onChange={handlePdfChange} className="form-control" />
@@ -232,10 +232,10 @@ const AddCourseWizard = () => {
               </section>}
 
               {step === 3 && <section className="course-wizard-step">
-                <div className="course-wizard-step-heading"><div><p className="course-wizard-kicker">FACULTATIF</p><h2>Présentation détaillée</h2><p>Rédigez une explication structurée. L’aperçu ci-dessous montre le rendu du cours.</p></div></div>
+                <div className="course-wizard-step-heading"><div><p className="course-wizard-kicker">FACULTATIF</p><h2>Présentation détaillée</h2><p>Rédigez une explication structurée. L’aperçu ci-dessous montre le rendu de la formation.</p></div></div>
                 <div className="course-editor-layout">
                   <div className="course-editor-pane">
-                    <label className="form-label">Contenu du cours</label>
+                    <label className="form-label">Contenu de la formation</label>
                     <ReactQuill theme="snow" value={courseData.description} onChange={(description) => setCourseData((current) => ({ ...current, description }))} modules={editorModules} formats={editorFormats} placeholder="Présentez le cours, ses objectifs et les points abordés…" />
                   </div>
                   <div className="course-preview-pane">
@@ -248,8 +248,8 @@ const AddCourseWizard = () => {
                 <div className="course-wizard-actions">
                   <button type="button" className="btn btn-outline-secondary" onClick={() => setStep(2)}>Retour</button>
                   <div className="course-wizard-action-group">
-                    <button type="button" className="btn btn-link" disabled={isSubmitting} onClick={() => submitCourse(true)}>Passer et créer le cours</button>
-                    <button type="button" className="btn btn-primary" disabled={isSubmitting} onClick={() => submitCourse(false)}>{isSubmitting ? 'Création…' : 'Créer le cours'}</button>
+                    <button type="button" className="btn btn-link" disabled={isSubmitting} onClick={() => submitCourse(true)}>Passer et créer la formation</button>
+                    <button type="button" className="btn btn-primary" disabled={isSubmitting} onClick={() => submitCourse(false)}>{isSubmitting ? 'Création…' : 'Créer la formation'}</button>
                   </div>
                 </div>
               </section>}

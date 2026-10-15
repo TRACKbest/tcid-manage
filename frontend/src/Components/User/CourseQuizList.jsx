@@ -26,7 +26,7 @@ const CourseQuizList = () => {
     },[course_id]);
 
       useEffect(()=>{
-        document.title='TCiD Center | Questionnaires du cours'
+        document.title='TCiD Center | Questionnaires de la formation'
       })
 
   return (

@@ -10,22 +10,22 @@ const adminTranslations = {
     main: 'Gestion pédagogique',
   },
   models: {
-    teacher: 'Enseignants',
-    coursecategory: 'Catégories de cours',
-    course: 'Cours',
-    chapter: 'Chapitres',
-    student: 'Étudiants',
-    studentcourseenrollment: 'Inscriptions aux cours',
-    courserating: 'Avis sur les cours',
-    studentfavoritecourse: 'Cours favoris',
-    courseview: 'Consultations des cours',
+    teacher: 'Formateurs',
+    coursecategory: 'Catégories de formations',
+    course: 'Formations',
+    chapter: 'Chapitres de formation',
+    student: 'Apprenants',
+    studentcourseenrollment: 'Inscriptions aux formations',
+    courserating: 'Avis sur les formations',
+    studentfavoritecourse: 'Formations favorites',
+    courseview: 'Consultations des formations',
     liveclassroom: 'Classes virtuelles',
     liveclasspoll: 'Sondages en direct',
     liveclasspollvote: 'Votes aux sondages',
     studentassignment: 'Devoirs',
     quiz: 'Questionnaires',
     quizquestions: 'Questions des questionnaires',
-    coursequiz: 'Questionnaires des cours',
+    coursequiz: 'Questionnaires des formations',
     attemptquiz: 'Tentatives de questionnaires',
     studymaterial: 'Ressources pédagogiques',
     aicachedresponse: 'Réponses IA mises en cache',
@@ -34,7 +34,7 @@ const adminTranslations = {
     learninggroup: 'Groupes de discussion',
     groupmembership: 'Membres des groupes',
     groupmessage: 'Messages de groupe',
-    teacherstudentchat: 'Messages enseignant-étudiant',
+    teacherstudentchat: 'Messages formateur-apprenant',
     notification: 'Notifications',
     group: 'Groupes',
     user: 'Utilisateurs',
@@ -71,9 +71,9 @@ const adminTranslations = {
     you_url: 'Lien YouTube',
     skills: 'Compétences',
     category: 'Catégorie',
-    teacher: 'Enseignant',
-    student: 'Étudiant',
-    course: 'Cours',
+    teacher: 'Formateur',
+    student: 'Apprenant',
+    course: 'Formation',
     quiz: 'Questionnaire',
     question: 'Question',
     questions: 'Questions',
@@ -649,14 +649,14 @@ function AdminConsole() {
                   <div className="admin-group-filters">
                     <label>Ajouter
                       <select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)}>
-                        <option value="all_students">Tous les étudiants actifs</option>
-                        <option value="course_students">Étudiants inscrits à un cours</option>
-                        <option value="teachers">Enseignants actifs</option>
+                        <option value="all_students">Tous les apprenants actifs</option>
+                        <option value="course_students">Apprenants inscrits à une formation</option>
+                        <option value="teachers">Formateurs actifs</option>
                       </select>
                     </label>
                     {groupFilter === 'course_students' && <label>Cours
                       <select value={groupCourseId} onChange={(event) => setGroupCourseId(event.target.value)}>
-                        <option value="">— Choisir un cours —</option>
+                        <option value="">— Choisir une formation —</option>
                         {groupCourses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
                       </select>
                     </label>}
@@ -708,7 +708,7 @@ function AdminConsole() {
                   {field.helpText && <small>{field.helpText}</small>}
                   </label>
                 })}
-                {isGroupAssignment && <p className="admin-form-hint is-wide">Chaque étudiant membre recevra un devoir individuel. Le choix d’un étudiant n’est donc pas nécessaire.</p>}
+                {isGroupAssignment && <p className="admin-form-hint is-wide">Chaque apprenant membre recevra un devoir individuel. Le choix d’un apprenant n’est donc pas nécessaire.</p>}
               </div>
               {formError && <div className="admin-alert" role="alert">{formError}</div>}
               <footer><button type="button" className="admin-cancel-button" onClick={() => setEditor(null)}>Annuler</button><button type="submit" className="admin-primary-button" disabled={saving}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button></footer>

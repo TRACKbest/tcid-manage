@@ -125,7 +125,7 @@ def answer_course_question(course, question):
     normalized_question = re.sub(r'[?.!]+$', '', display_question.casefold()).strip()
     chunks = retrieve_chunks(course, question, limit=3)
     if not chunks:
-        raise ValueError('Aucun contenu textuel exploitable n’est disponible pour ce cours.')
+        raise ValueError('Aucun contenu textuel exploitable n’est disponible pour cette formation.')
     context = '\n\n'.join(f"[{chunk['title']}] {chunk['text']}" for chunk in chunks)
     content_fingerprint = _course_content_fingerprint(course)
     cache_key = _cache_key(
@@ -143,7 +143,7 @@ def answer_course_question(course, question):
             'Tu es un tuteur pédagogique. Réponds en français, en 300 tokens maximum. '
             'Utilise uniquement le CONTEXTE fourni; si la réponse manque, dis-le clairement. '
             'N’invente pas de citations.',
-            f'CONTEXTE DU COURS:\n{context}\n\nQUESTION:\n{question}',
+            f'CONTEXTE DE LA FORMATION:\n{context}\n\nQUESTION:\n{question}',
             max_tokens=300,
         )
         sources = [chunk['title'] for chunk in chunks]
@@ -173,7 +173,7 @@ def summarize_material(material):
         raise ValueError('Le document ne contient aucun texte extractible.')
     material.extracted_text = content
     summary = _complete(
-        'Résume le document pour un étudiant en français, avec un titre et 4 à 6 points clés. '
+        'Résume le document pour un apprenant en français, avec un titre et 4 à 6 points clés. '
         'Sois fidèle au texte et reste sous 250 tokens.',
         f"DOCUMENT: {material.title}\n\nTEXTE:\n{content[:18000]}",
         max_tokens=300,

@@ -3,43 +3,43 @@ from . import models
 
 admin.site.site_header = 'Administration TCiD Center'
 admin.site.site_title = 'Administration TCiD Center'
-admin.site.index_title = 'Gérer les cours, les enseignants et les étudiants'
+admin.site.index_title = 'Gérer les formations, les formateurs et les apprenants'
 
 
-@admin.action(description='Bloquer les comptes enseignants sélectionnés')
+@admin.action(description='Bloquer les comptes formateurs sélectionnés')
 def block_teachers(modeladmin, request, queryset):
 	updated = queryset.update(is_active=False)
-	modeladmin.message_user(request, f'{updated} compte(s) enseignant(s) bloqué(s).')
+	modeladmin.message_user(request, f'{updated} compte(s) formateur(s) bloqué(s).')
 
 
-@admin.action(description='Réactiver les comptes enseignants sélectionnés')
+@admin.action(description='Réactiver les comptes formateurs sélectionnés')
 def reactivate_teachers(modeladmin, request, queryset):
 	updated = queryset.update(is_active=True)
-	modeladmin.message_user(request, f'{updated} compte(s) enseignant(s) réactivé(s).')
+	modeladmin.message_user(request, f'{updated} compte(s) formateur(s) réactivé(s).')
 
 
-@admin.action(description='Bloquer les comptes étudiants sélectionnés')
+@admin.action(description='Bloquer les comptes apprenants sélectionnés')
 def block_students(modeladmin, request, queryset):
 	updated = queryset.update(is_active=False)
-	modeladmin.message_user(request, f'{updated} compte(s) étudiant(s) bloqué(s).')
+	modeladmin.message_user(request, f'{updated} compte(s) apprenant(s) bloqué(s).')
 
 
-@admin.action(description='Réactiver les comptes étudiants sélectionnés')
+@admin.action(description='Réactiver les comptes apprenants sélectionnés')
 def reactivate_students(modeladmin, request, queryset):
 	updated = queryset.update(is_active=True)
-	modeladmin.message_user(request, f'{updated} compte(s) étudiant(s) réactivé(s).')
+	modeladmin.message_user(request, f'{updated} compte(s) apprenant(s) réactivé(s).')
 
 
-@admin.action(description='Approuver les comptes enseignants sélectionnés')
+@admin.action(description='Approuver les comptes formateurs sélectionnés')
 def approve_teachers(modeladmin, request, queryset):
 	updated = queryset.filter(is_approved=False).update(is_approved=True, is_active=True)
-	modeladmin.message_user(request, f'{updated} compte(s) enseignant(s) approuvé(s).')
+	modeladmin.message_user(request, f'{updated} compte(s) formateur(s) approuvé(s).')
 
 
-@admin.action(description='Approuver les comptes étudiants sélectionnés')
+@admin.action(description='Approuver les comptes apprenants sélectionnés')
 def approve_students(modeladmin, request, queryset):
 	updated = queryset.filter(is_approved=False).update(is_approved=True, is_active=True)
-	modeladmin.message_user(request, f'{updated} compte(s) étudiant(s) approuvé(s).')
+	modeladmin.message_user(request, f'{updated} compte(s) apprenant(s) approuvé(s).')
 
 
 @admin.display(description='État du compte')

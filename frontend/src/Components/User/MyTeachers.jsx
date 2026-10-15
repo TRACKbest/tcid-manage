@@ -72,7 +72,7 @@ const MyTeachers = () => {
       };
 
     useEffect(()=>{
-        document.title='TCiD Center | Mes enseignants'
+        document.title='TCiD Center | Mes formateurs'
       })
 
       const msgList={
@@ -88,7 +88,7 @@ const MyTeachers = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-person-check-fill"/> Mes enseignants</h5>
+                    <h5 className='card-header'><i class="bi bi-person-check-fill"/> Mes formateurs</h5>
                     <div className='card-body  table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>
@@ -112,7 +112,7 @@ const MyTeachers = () => {
     <div className="modal-header">
         <div className="modal-title chat-contact" id="exampleModalLabel">
             {row.teacher.profile_img ? <img className="chat-contact-avatar" src={row.teacher.profile_img} alt="" /> : <span className="chat-contact-avatar chat-contact-avatar--fallback" aria-hidden="true">{row.teacher.full_name?.charAt(0)}</span>}
-            <div><h5 className="mb-0">{row.teacher.full_name}</h5><small className="text-muted">Enseignant</small></div>
+            <div><h5 className="mb-0">{row.teacher.full_name}</h5><small className="text-muted">Formateur</small></div>
         </div>
         <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
     </div>

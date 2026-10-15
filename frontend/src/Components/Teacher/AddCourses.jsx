@@ -8,7 +8,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const AddCourses = () => {
     useEffect(()=>{
-        document.title='TCiD Center | Ajouter un cours'
+        document.title='TCiD Center | Ajouter une formation'
       })
 
       const [cats,setCats]=useState([])
@@ -61,7 +61,7 @@ const AddCourses = () => {
       const formSubmit=async ()=>{
         const teacherId=localStorage.getItem('teacherId')
         if (!teacherId) {
-            setErrorMsg('Connectez-vous avec un compte enseignant avant de créer un cours.')
+            setErrorMsg('Connectez-vous avec un compte formateur avant de créer une formation.')
             return
         }
         if (!courseData.category) {
@@ -69,7 +69,7 @@ const AddCourses = () => {
             return
         }
         if (!courseData.title.trim() || !courseData.description.trim() || !courseData.f_img) {
-            setErrorMsg('Renseignez le titre, la description et une image du cours.')
+            setErrorMsg('Renseignez le titre, la description et une image de la formation.')
             return
         }
 
@@ -90,7 +90,7 @@ const AddCourses = () => {
                     'content-type':'multipart/form-data'
                 }
             });
-            setSuccessMsg('Cours ajouté. Il est maintenant visible dans sa catégorie.')
+            setSuccessMsg('Formation ajoutée. Elle est maintenant visible dans sa catégorie.')
             setCourseData(currentData => ({
                 ...currentData,
                 title: '',
@@ -102,7 +102,7 @@ const AddCourses = () => {
             console.error('Could not create course:', error.response?.data || error)
             setErrorMsg(error.response?.data
                 ? JSON.stringify(error.response.data)
-                : 'Impossible d’ajouter le cours. Vérifiez la connexion au serveur Django.')
+                : 'Impossible d’ajouter la formation. Vérifiez la connexion au serveur Django.')
         } finally {
             setIsSubmitting(false)
         }
@@ -116,7 +116,7 @@ const AddCourses = () => {
         </aside>
         <section className='col-md-9'>
             <div className='card'>
-                <h3 className='card-header'><i class="bi bi-plus-square"></i> Ajouter un cours</h3>
+                <h3 className='card-header'><i class="bi bi-plus-square"></i> Ajouter une formation</h3>
                 <div className='card-body'>
                 {errorMsg && <div className="alert alert-danger" role="alert">{errorMsg}</div>}
                 {successMsg && <div className="alert alert-success" role="status">{successMsg}</div>}

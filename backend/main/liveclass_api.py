@@ -62,12 +62,12 @@ class CourseLiveClassrooms(APIView):
 
         if teacher_id:
             if str(course.teacher_id) != teacher_id:
-                raise PermissionDenied('Only the course teacher can view these sessions.')
+                raise PermissionDenied('Seul le formateur de la formation peut consulter ces sessions.')
         elif student_id:
             if not _is_approved_student(student_id, course_id):
-                raise PermissionDenied('An approved course enrollment is required.')
+                raise PermissionDenied('Une inscription approuvée à la formation est nécessaire.')
         else:
-            raise PermissionDenied('A teacher or student identity is required.')
+            raise PermissionDenied('Une identité de formateur ou d’apprenant est nécessaire.')
 
         sessions = models.LiveClassroom.objects.filter(course=course)
         return Response(LiveClassroomSerializer(sessions, many=True).data)
@@ -75,7 +75,7 @@ class CourseLiveClassrooms(APIView):
     def post(self, request, course_id):
         course = get_object_or_404(models.Course, pk=course_id)
         if str(course.teacher_id) != str(request.data.get('teacher_id', '')):
-            raise PermissionDenied('Only the course teacher can schedule a session.')
+            raise PermissionDenied('Seul le formateur de la formation peut programmer une session.')
 
         serializer = LiveClassroomSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -85,7 +85,7 @@ class CourseLiveClassrooms(APIView):
             _notify_enrolled_students(
                 classroom,
                 'Classe virtuelle programmée',
-                f'La session « {classroom.title} » du cours {course.title} est prévue le {scheduled_time}.',
+                f'La session « {classroom.title} » de la formation {course.title} est prévue le {scheduled_time}.',
             )
         return Response(LiveClassroomSerializer(classroom).data, status=status.HTTP_201_CREATED)
 
@@ -97,7 +97,7 @@ class LiveClassroomAction(APIView):
             pk=classroom_id,
         )
         if str(classroom.course.teacher_id) != str(request.data.get('teacher_id', '')):
-            raise PermissionDenied('Only the course teacher can control this session.')
+            raise PermissionDenied('Seul le formateur de la formation peut gérer cette session.')
 
         if action == 'start':
             with transaction.atomic():
@@ -106,7 +106,7 @@ class LiveClassroomAction(APIView):
                     pk=classroom_id,
                 )
                 if classroom.status == models.LiveClassroom.STATUS_ENDED:
-                    return Response({'detail': 'This session has ended.'}, status=status.HTTP_409_CONFLICT)
+                    return Response({'detail': 'Cette session est terminée.'}, status=status.HTTP_409_CONFLICT)
                 if classroom.status != models.LiveClassroom.STATUS_LIVE:
                     classroom.status = models.LiveClassroom.STATUS_LIVE
                     classroom.started_at = timezone.now()
@@ -114,7 +114,7 @@ class LiveClassroomAction(APIView):
                     _notify_enrolled_students(
                         classroom,
                         'Classe virtuelle en direct',
-                        f'La session « {classroom.title} » du cours {classroom.course.title} a commencé. Rejoignez-la maintenant.',
+                        f'La session « {classroom.title} » de la formation {classroom.course.title} a commencé. Rejoignez-la maintenant.',
                     )
             return Response(LiveClassroomSerializer(classroom).data)
 
@@ -134,36 +134,36 @@ class LiveClassroomAction(APIView):
                         _notify_enrolled_students(
                             classroom,
                             'Classe virtuelle terminée',
-                            f'La session « {classroom.title} » du cours {classroom.course.title} est terminée.',
+                            f'La session « {classroom.title} » de la formation {classroom.course.title} est terminée.',
                         )
                         should_broadcast_end = True
             if should_broadcast_end:
                 _broadcast(classroom.id, {'type': 'session_ended'})
             return Response(LiveClassroomSerializer(classroom).data)
 
-        return Response({'detail': 'Unknown session action.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'detail': 'Action de session inconnue.'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class LiveClassroomJoin(APIView):
     def post(self, request, classroom_id):
         classroom = get_object_or_404(models.LiveClassroom, pk=classroom_id)
         if classroom.status != models.LiveClassroom.STATUS_LIVE:
-            return Response({'detail': 'This session is not live.'}, status=status.HTTP_409_CONFLICT)
+            return Response({'detail': 'Cette session n’est pas en direct.'}, status=status.HTTP_409_CONFLICT)
 
         teacher_id = request.data.get('teacher_id')
         student_id = request.data.get('student_id')
         if teacher_id:
             if str(classroom.course.teacher_id) != str(teacher_id):
-                raise PermissionDenied('Only the course teacher can join with a teacher role.')
+                raise PermissionDenied('Seul le formateur de la formation peut rejoindre avec ce rôle.')
             teacher = get_object_or_404(models.Teacher, pk=teacher_id)
             role, participant_id, display_name = 'teacher', teacher.pk, teacher.full_name
         elif student_id:
             student = get_object_or_404(models.Student, pk=student_id)
             if not _is_approved_student(student.pk, classroom.course_id):
-                raise PermissionDenied('An approved course enrollment is required.')
+                raise PermissionDenied('Une inscription approuvée à la formation est nécessaire.')
             role, participant_id, display_name = 'student', student.pk, student.fullname
         else:
-            raise PermissionDenied('A teacher or student identity is required.')
+            raise PermissionDenied('Une identité de formateur ou d’apprenant est nécessaire.')
 
         token = signing.dumps(
             {'classroom_id': classroom.pk, 'role': role, 'participant_id': participant_id},
@@ -180,9 +180,9 @@ class LiveClassPollListCreate(APIView):
         student_id = request.query_params.get('student_id')
         if teacher_id:
             if str(classroom.course.teacher_id) != teacher_id:
-                raise PermissionDenied('Only the course teacher can view these polls.')
+                raise PermissionDenied('Seul le formateur de la formation peut consulter ces sondages.')
         elif not student_id or not _is_approved_student(student_id, classroom.course_id):
-            raise PermissionDenied('An approved course enrollment is required.')
+            raise PermissionDenied('Une inscription approuvée à la formation est nécessaire.')
 
         polls = classroom.polls.all()
         return Response(LiveClassPollSerializer(polls, many=True).data)
@@ -190,9 +190,9 @@ class LiveClassPollListCreate(APIView):
     def post(self, request, classroom_id):
         classroom = get_object_or_404(models.LiveClassroom, pk=classroom_id)
         if str(classroom.course.teacher_id) != str(request.data.get('teacher_id', '')):
-            raise PermissionDenied('Only the course teacher can create a poll.')
+            raise PermissionDenied('Seul le formateur de la formation peut créer un sondage.')
         if classroom.status != models.LiveClassroom.STATUS_LIVE:
-            return Response({'detail': 'Polls are available only during a live session.'}, status=status.HTTP_409_CONFLICT)
+            return Response({'detail': 'Les sondages sont disponibles uniquement pendant une session en direct.'}, status=status.HTTP_409_CONFLICT)
 
         serializer = LiveClassPollSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -209,17 +209,17 @@ class LiveClassPollVote(APIView):
         poll = get_object_or_404(models.LiveClassPoll.objects.select_related('classroom__course'), pk=poll_id)
         classroom = poll.classroom
         if classroom.status != models.LiveClassroom.STATUS_LIVE or not poll.is_active:
-            return Response({'detail': 'This poll is closed.'}, status=status.HTTP_409_CONFLICT)
+            return Response({'detail': 'Ce sondage est fermé.'}, status=status.HTTP_409_CONFLICT)
 
         student = get_object_or_404(models.Student, pk=request.data.get('student_id'))
         if not _is_approved_student(student.pk, classroom.course_id):
-            raise PermissionDenied('An approved course enrollment is required.')
+            raise PermissionDenied('Une inscription approuvée à la formation est nécessaire.')
         try:
             option_index = int(request.data.get('option_index'))
         except (TypeError, ValueError):
-            return Response({'detail': 'A valid poll option is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Sélectionnez une option de sondage valide.'}, status=status.HTTP_400_BAD_REQUEST)
         if option_index < 0 or option_index >= len(poll.options):
-            return Response({'detail': 'The selected option does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'L’option sélectionnée n’existe pas.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             with transaction.atomic():
@@ -229,7 +229,7 @@ class LiveClassPollVote(APIView):
                     option_index=option_index,
                 )
         except IntegrityError:
-            return Response({'detail': 'You have already answered this poll.'}, status=status.HTTP_409_CONFLICT)
+            return Response({'detail': 'Vous avez déjà répondu à ce sondage.'}, status=status.HTTP_409_CONFLICT)
 
         payload = {'type': 'poll_results', 'poll': _poll_payload(poll)}
         _broadcast(classroom.id, payload)

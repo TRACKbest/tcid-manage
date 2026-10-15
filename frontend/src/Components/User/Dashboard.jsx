@@ -9,7 +9,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const Dashboard = () => {
   useEffect(()=>{
-    document.title='TCiD Center | Tableau de bord étudiant'
+    document.title='TCiD Center | Tableau de bord apprenant'
   })
 
   const [dashbarData,setDashbarData]=useState([])
@@ -37,7 +37,7 @@ const Dashboard = () => {
                   <h4>Tableau de bord</h4>
                   <div className='col-md-4 pt-3'>
                     <div className='card border-primary'>
-                      <h5 className='card-header bg-warning text-white'>Cours suivis</h5>
+                      <h5 className='card-header bg-warning text-white'>Formations suivies</h5>
                       <div className='card-body'>
                         <h3><Link to="/my-courses" className='text-warning'>{dashbarData.enrolled_courses} <i class="bi bi-cart-check-fill"></i></Link></h3>
                       </div>
@@ -45,7 +45,7 @@ const Dashboard = () => {
                   </div>
                   <div className='col-md-4 pt-3'>
                     <div className='card border-primary'>
-                      <h5 className='card-header bg-success text-white'>Cours favoris</h5>
+                      <h5 className='card-header bg-success text-white'>Formations favorites</h5>
                       <div className='card-body'>
                         <h3><Link to="/favorite-courses" className='text-success'>{dashbarData.favorite_courses} <i class="bi bi-heart-fill text-success"></i></Link></h3>
                       </div>

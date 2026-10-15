@@ -24,7 +24,7 @@ const RecomemdedCourses = () => {
     },[studentId]);
 
     useEffect(()=>{
-        document.title='TCiD Center | Cours recommandés'
+        document.title='TCiD Center | Formations recommandées'
       })
   return (
     <div className='container mt-4'>
@@ -34,14 +34,14 @@ const RecomemdedCourses = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-megaphone"> </i>  Cours recommandés pour vous</h5>
+                    <h5 className='card-header'><i class="bi bi-megaphone"> </i>  Formations recommandées pour vous</h5>
                     <div className='card-body table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>
                                 <tr>
-                                    <th className='text-center'>Nom du cours</th>
+                                    <th className='text-center'>Nom de la formation</th>
                                     <th className='text-center'>Image</th>
-                                    <th className='text-center'>Enseignant</th>
+                                    <th className='text-center'>Formateur</th>
                                     <th className='text-center'>Mots-clés</th>
                                 </tr>
                             </thead>

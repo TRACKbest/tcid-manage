@@ -121,7 +121,7 @@ const Header = () => {
             <div className="navbar-nav ms-auto p-4 p-lg-0">
                 <Link to="/" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-house-door" aria-hidden="true"></i>Accueil</Link>
                 <Link to="/category" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-grid" aria-hidden="true"></i>Catégories</Link>
-                <Link to="/all-courses" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-book" aria-hidden="true"></i>Cours</Link>
+                <Link to="/all-courses" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-book" aria-hidden="true"></i>Formations</Link>
                 {recipientType && recipientId && <div className="nav-item dropdown">
                   <button type="button" className="nav-link btn border-0 d-flex align-items-center gap-2" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} non lues` : 'Notifications'} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}>
                     <i className="bi bi-bell" aria-hidden="true"></i>
@@ -138,7 +138,7 @@ const Header = () => {
                   </div>}
                 </div>}
                 <div className="nav-item dropdown">
-                    <button type="button" className="nav-link dropdown-toggle" aria-expanded={openAccountMenu === 'teacher'} onClick={() => setOpenAccountMenu(openAccountMenu === 'teacher' ? '' : 'teacher')}><i className="bi bi-person-badge" aria-hidden="true"></i>Enseignant</button>
+                    <button type="button" className="nav-link dropdown-toggle" aria-expanded={openAccountMenu === 'teacher'} onClick={() => setOpenAccountMenu(openAccountMenu === 'teacher' ? '' : 'teacher')}><i className="bi bi-person-badge" aria-hidden="true"></i>Formateur</button>
                     <div className={`dropdown-menu fade-down m-0${openAccountMenu === 'teacher' ? ' show' : ''}`}>
                     {teacherLoginStatus !== 'true' && 
                     <>
@@ -155,7 +155,7 @@ const Header = () => {
                     </div>
                 </div>
                 <div className="nav-item dropdown">
-                    <button type="button" className="nav-link dropdown-toggle ps-0 px-5" aria-expanded={openAccountMenu === 'student'} onClick={() => setOpenAccountMenu(openAccountMenu === 'student' ? '' : 'student')}><i className="bi bi-mortarboard" aria-hidden="true"></i>Étudiant</button>
+                    <button type="button" className="nav-link dropdown-toggle ps-0 px-5" aria-expanded={openAccountMenu === 'student'} onClick={() => setOpenAccountMenu(openAccountMenu === 'student' ? '' : 'student')}><i className="bi bi-mortarboard" aria-hidden="true"></i>Apprenant</button>
                     <div className={`dropdown-menu fade-down m-0${openAccountMenu === 'student' ? ' show' : ''}`}>
                     {studentLoginStatus !== 'true' && 
                     <>

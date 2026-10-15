@@ -97,7 +97,7 @@ const Groups = () => {
         ...assignment,
         detail: DOMPurify.sanitize(assignment.detail),
       })
-      setNotice(`Devoir envoyé à ${response.data.created} étudiant(s) du groupe.`)
+      setNotice(`Devoir envoyé à ${response.data.created} apprenant(s) du groupe.`)
       setAssignment({ title: '', detail: '' })
       setShowAssignmentForm(false)
       setError('')
@@ -130,14 +130,14 @@ const Groups = () => {
                   {isTeacher && <button className="btn btn-outline-primary btn-sm ms-auto" type="button" onClick={() => setShowAssignmentForm((visible) => !visible)}>Donner un devoir au groupe</button>}
                 </div>}
                 {isTeacher && showAssignmentForm && <form className="border rounded p-3 mb-3" onSubmit={sendAssignment}>
-                  <h6>Devoir envoyé aux étudiants du groupe</h6>
+                  <h6>Devoir envoyé aux apprenants du groupe</h6>
                   <label className="form-label" htmlFor="group-assignment-title">Titre</label>
                   <input className="form-control mb-2" id="group-assignment-title" required value={assignment.title} onChange={(event) => setAssignment({ ...assignment, title: event.target.value })} />
                   <label className="form-label" htmlFor="group-assignment-detail">Consignes</label>
                   <div id="group-assignment-detail" className="mb-3 assignment-rich-editor">
                     <RichTextEditor value={assignment.detail} onChange={(detail) => setAssignment((current) => ({ ...current, detail }))} placeholder="Rédigez les consignes du devoir…" />
                   </div>
-                  <button className="btn btn-primary" type="submit">Envoyer aux étudiants</button>
+                  <button className="btn btn-primary" type="submit">Envoyer aux apprenants</button>
                 </form>}
                 <div className="border rounded p-3 mb-3" style={{ height: 420, overflowY: 'auto' }} aria-live="polite">
                   {messages.map((item) => <article className="mb-3" key={item.id}>

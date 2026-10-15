@@ -8,7 +8,7 @@ const baseUrl = `${process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'}
 
 const PopularCourses = () => {
   useEffect(()=>{
-    document.title='TCiD Center | Cours populaires'
+    document.title='TCiD Center | Formations populaires'
   })
 
   const [courseData, setCourseData]=useState([]);
@@ -47,8 +47,8 @@ const PopularCourses = () => {
   return (
     <div className='container mt-4 '>
 <div class="text-center wow fadeInUp">
-                <h6 class="section-title bg-white text-center text-primary px-3">Cours</h6>
-                <h1 class="mb-5">Cours populaires</h1>
+                <h6 class="section-title bg-white text-center text-primary px-3">Formations</h6>
+                <h1 class="mb-5">Formations populaires</h1>
             </div>        <div className='row mb-4'>
       {courseData && courseData.map((row,index) =>
       <div className='col-md-3 mb-4'>

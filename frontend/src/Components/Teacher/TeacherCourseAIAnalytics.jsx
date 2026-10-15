@@ -14,7 +14,7 @@ const TeacherCourseAIAnalytics = () => {
   useEffect(() => {
     document.title = 'TCiD Center | Analyse des questions'
     if (!teacherId) {
-      setError('Connectez-vous comme enseignant pour voir ces statistiques.')
+      setError('Connectez-vous comme formateur pour voir ces statistiques.')
       return
     }
     axios.get(`${baseUrl}/ai/courses/${courseId}/analytics/`, { params: { teacher_id: teacherId } })
@@ -31,10 +31,10 @@ const TeacherCourseAIAnalytics = () => {
         <aside className="col-md-3"><TeacherSidebar /></aside>
         <section className="col-md-9">
           <Link className="d-inline-flex align-items-center gap-2 mb-3" to="/teacher-my-course">
-            <i className="bi bi-arrow-left" aria-hidden="true" /> Retour aux cours
+            <i className="bi bi-arrow-left" aria-hidden="true" /> Retour aux formations
           </Link>
           <p className="text-success fw-bold small mb-1">STATISTIQUES PÉDAGOGIQUES · ANALYSE SQL</p>
-          <h1 className="h3 mb-3">Questions des étudiants</h1>
+          <h1 className="h3 mb-3">Questions des apprenants</h1>
           {error && <div className="alert alert-danger" role="alert">{error}</div>}
           {analytics && (
             <>

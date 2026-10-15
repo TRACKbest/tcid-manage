@@ -45,7 +45,7 @@ const VirtualClassroom = () => {
   useEffect(() => {
     document.title = 'TCiD Center | Classe virtuelle'
     if (!isTeacher && !isStudent) {
-      setError('Connectez-vous avec un compte enseignant ou étudiant.')
+      setError('Connectez-vous avec un compte formateur ou apprenant.')
       setLoading(false)
       return
     }
@@ -134,17 +134,17 @@ const VirtualClassroom = () => {
       <header className="live-class-header">
         <div>
           <Link className="live-class-back" to={isTeacher ? '/teacher-my-course' : '/my-courses'}>
-            <i className="bi bi-arrow-left" aria-hidden="true" /> Retour aux cours
+            <i className="bi bi-arrow-left" aria-hidden="true" /> Retour aux formations
           </Link>
           <p className="live-class-eyebrow">SALLE DE CLASSE</p>
           <h1>{course?.title || 'Classe virtuelle'}</h1>
           <p className="live-class-subtitle">
-            {isTeacher ? 'Planifiez et animez une session en direct.' : 'Rejoignez les sessions de votre cours.'}
+            {isTeacher ? 'Planifiez et animez une session en direct.' : 'Rejoignez les sessions de votre formation.'}
           </p>
         </div>
         <span className="live-class-role">
           <i className={`bi ${isTeacher ? 'bi-easel2' : 'bi-mortarboard'}`} aria-hidden="true" />
-          {isTeacher ? 'Enseignant' : 'Étudiant'}
+          {isTeacher ? 'Formateur' : 'Apprenant'}
         </span>
       </header>
 
@@ -156,7 +156,7 @@ const VirtualClassroom = () => {
             <i className="bi bi-calendar2-plus" aria-hidden="true" />
             <div>
               <h2>Nouvelle session</h2>
-              <p>La salle devient accessible aux étudiants inscrits dès son démarrage.</p>
+              <p>La salle devient accessible aux apprenants inscrits dès son démarrage.</p>
             </div>
           </div>
           <div className="live-class-create-fields">
@@ -187,7 +187,7 @@ const VirtualClassroom = () => {
       <section className="live-class-sessions" aria-labelledby="live-class-sessions-title">
         <div className="live-class-section-heading">
           <div>
-            <p className="live-class-eyebrow">COURS · {course?.title || ''}</p>
+            <p className="live-class-eyebrow">FORMATION · {course?.title || ''}</p>
             <h2 id="live-class-sessions-title">Sessions</h2>
           </div>
           <button className="btn btn-outline-secondary btn-sm" onClick={loadPage} type="button" title="Actualiser">

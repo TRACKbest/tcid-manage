@@ -61,7 +61,7 @@ const TeacherLogin = () => {
     }
 
     useEffect(()=>{
-        document.title='TCiD Center | Connexion enseignant'
+        document.title='TCiD Center | Connexion formateur'
       })
 
 
@@ -73,7 +73,7 @@ const TeacherLogin = () => {
         <div class="card border-0 shadow rounded-3 my-5">
           <div class="card-body p-4 p-sm-5">
           <div class="text-center wow fadeInUp">
-          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark">CONNEXION ENSEIGNANT</h5>
+          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark">CONNEXION FORMATEUR</h5>
           </div>            
             {errorMsg && <p className='text-danger'>{errorMsg}</p>}
               <div class="form-floating mb-3">
@@ -87,7 +87,7 @@ const TeacherLogin = () => {
               <div class="d-grid my-4">
                 <button onClick={submitForm} class="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="submit" >Se connecter</button>
                 <hr className=''/>
-                <Link to='/teacher-register' type="submit"  class="btn btn-danger rounded-pill btn-login text-uppercase fw-bold " >Créer un compte enseignant</Link>
+                <Link to='/teacher-register' type="submit"  class="btn btn-danger rounded-pill btn-login text-uppercase fw-bold " >Créer un compte formateur</Link>
               </div>
           </div>
         </div>

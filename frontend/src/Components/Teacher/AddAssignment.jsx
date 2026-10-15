@@ -59,7 +59,7 @@ const AddAssignment = () => {
               detail: DOMPurify.sanitize(assignmentData.detail),
             })
             Swal.fire({
-              title: `Devoir envoyé à ${response.data.created} étudiant(s) du groupe.`,
+              title: `Devoir envoyé à ${response.data.created} apprenant(s) du groupe.`,
               icon: 'success',
               toast: true,
               timer: 3000,
@@ -118,7 +118,7 @@ const AddAssignment = () => {
                      <div className="mb-3">
                         <label htmlFor="assignment-target" className="form-label">Destinataire</label>
                         <select className="form-select" id="assignment-target" value={targetType} onChange={(event) => setTargetType(event.target.value)}>
-                            <option value="student">Étudiant sélectionné</option>
+                            <option value="student">Apprenant sélectionné</option>
                             <option value="group" disabled={!groups.length}>Un de mes groupes</option>
                         </select>
                     </div>
@@ -128,7 +128,7 @@ const AddAssignment = () => {
                             <option value="">— Choisir un groupe —</option>
                             {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
                         </select>
-                        <small className="form-text text-muted">Le devoir sera envoyé à tous les étudiants membres; les enseignants ne le reçoivent pas comme devoir étudiant.</small>
+                        <small className="form-text text-muted">Le devoir sera envoyé à tous les apprenants membres; les formateurs ne le reçoivent pas comme devoir d’apprenant.</small>
                     </div>}
                      <div className="mb-3">
                         <label htmlFor="title" className="form-label">Titre</label>

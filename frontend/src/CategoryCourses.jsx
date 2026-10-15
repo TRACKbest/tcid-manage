@@ -9,7 +9,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const CategoryCourses = () => {
   useEffect(()=>{
-    document.title='TCiD Center | Cours de la catégorie'
+    document.title='TCiD Center | Formations de la catégorie'
   })
 
   useEffect(() => {

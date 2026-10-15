@@ -516,7 +516,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
 
       {(mediaError || roomEnded) && (
         <div className={`live-room-notice ${roomEnded ? 'is-ended' : ''}`} role="status">
-          {roomEnded ? 'L’enseignant a terminé cette session.' : mediaError}
+          {roomEnded ? 'Le formateur a terminé cette session.' : mediaError}
         </div>
       )}
 

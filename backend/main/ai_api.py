@@ -37,7 +37,7 @@ def _approved_student(student_id, course_id):
 def _teacher_course(course_id, teacher_id):
     course = get_object_or_404(models.Course, pk=course_id)
     if str(course.teacher_id) != str(teacher_id):
-        raise PermissionDenied('Seul l’enseignant du cours peut accéder à cette fonction.')
+        raise PermissionDenied('Seul le formateur de la formation peut accéder à cette fonction.')
     return course
 
 
@@ -98,7 +98,7 @@ class StudyMaterialSummaryAPIView(APIView):
         elif student_id:
             _approved_student(student_id, material.course_id)
         else:
-            raise PermissionDenied('Une identité d’enseignant ou d’étudiant est nécessaire.')
+            raise PermissionDenied('Une identité de formateur ou d’apprenant est nécessaire.')
 
         try:
             summary, cached = summarize_material(material)
@@ -114,7 +114,7 @@ class TeacherQuizGenerationAPIView(APIView):
         quiz = get_object_or_404(models.Quiz, pk=quiz_id)
         teacher_id = request.data.get('teacher_id')
         if str(quiz.teacher_id) != str(teacher_id):
-            raise PermissionDenied('Seul l’enseignant propriétaire du quiz peut générer ses questions.')
+            raise PermissionDenied('Seul le formateur propriétaire du quiz peut générer ses questions.')
         try:
             generated = generate_quiz_questions(quiz, teacher_id)
         except PermissionError as error:

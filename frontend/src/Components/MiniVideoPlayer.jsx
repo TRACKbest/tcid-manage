@@ -39,7 +39,7 @@ const MiniVideoPlayer = () => {
     }, [])
 
     useEffect(()=>{
-      document.title='TCiD Center | Contenu du cours'
+      document.title='TCiD Center | Contenu de la formation'
     }, [])
 
 
@@ -47,7 +47,7 @@ const MiniVideoPlayer = () => {
     <main className="course-video-page">
       <header className="course-video-header">
         <span className="text-uppercase text-success fw-semibold">Votre apprentissage</span>
-        <h1>Contenu vidéo du cours</h1>
+        <h1>Contenu vidéo de la formation</h1>
         <p>Regardez les chapitres disponibles à votre rythme.</p>
       </header>
       {isLoading && <p className="course-video-status" role="status">Chargement des vidéos…</p>}
@@ -56,7 +56,7 @@ const MiniVideoPlayer = () => {
         <section className="course-video-empty" role="status">
           <i className="bi bi-camera-video-off" aria-hidden="true"></i>
           <h2>Aucune vidéo disponible</h2>
-          <p>Ce cours ne contient pas encore de vidéo. Revenez plus tard pour découvrir les nouveaux chapitres.</p>
+          <p>Cette formation ne contient pas encore de vidéo. Revenez plus tard pour découvrir les nouveaux chapitres.</p>
         </section>
       )}
       {!isLoading && !loadError && chapterData.some((chapter) => chapter.video) && (

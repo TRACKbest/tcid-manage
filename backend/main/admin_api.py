@@ -397,7 +397,7 @@ def admin_group_members(request, group_id):
         elif filter_type == 'course_students':
             course_id = payload.get('courseId')
             if not course_id:
-                return JsonResponse({'detail': 'Sélectionnez un cours.'}, status=400)
+                return JsonResponse({'detail': 'Sélectionnez une formation.'}, status=400)
             candidates = models.Student.objects.filter(
                 is_active=True,
                 is_approved=True,

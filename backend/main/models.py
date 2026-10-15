@@ -19,7 +19,7 @@ class Teacher(models.Model):
     you_url=models.URLField(null=True,blank=True)
 
     class Meta:
-        verbose_name_plural="1. Teacher"
+        verbose_name_plural="1. Formateurs"
 
     def __str__(self):
         return self.full_name
@@ -47,7 +47,7 @@ class CourseCategory(models.Model):
     description=models.TextField(blank=True, default='')
 
     class Meta:
-        verbose_name_plural="2. Course Categories"
+        verbose_name_plural="2. Catégories de formations"
 
     def total_courses(self):
         return Course.objects.filter(category=self).count()
@@ -65,7 +65,7 @@ class Course(models.Model):
     course_views=models.BigIntegerField(default=0)
 
     class Meta:
-        verbose_name_plural="3. Courses"
+        verbose_name_plural="3. Formations"
 
     def related_videos(self):
         if not self.techs or not self.techs.strip():
@@ -130,7 +130,7 @@ class Student(models.Model):
         return pending_assignments
 
     class Meta:
-        verbose_name_plural="5. Students"
+        verbose_name_plural="5. Apprenants"
 
 class StudentCourseEnrollment(models.Model):
     STATUS_PENDING = 'pending'
@@ -148,7 +148,7 @@ class StudentCourseEnrollment(models.Model):
     status=models.CharField(max_length=10,choices=STATUS_CHOICES,default=STATUS_PENDING)
 
     class Meta:
-         verbose_name_plural="6. Enrolled Courses"
+         verbose_name_plural="6. Inscriptions aux formations"
 
     def __str__(self) :
         return f"{self.course}-{self.student}"
@@ -161,7 +161,7 @@ class CourseRating(models.Model):
     review_time=models.DateTimeField(auto_now_add=True)
 
     class Meta:
-         verbose_name_plural="7. Course Ratings"
+         verbose_name_plural="7. Avis sur les formations"
 
     def __str__(self):
         return f"{self.course}-{self.student}-{self.rating}"
@@ -172,7 +172,7 @@ class StudentFavoriteCourse(models.Model):
     status=models.BooleanField(default=False)
 
     class Meta:
-         verbose_name_plural="8. Student Favorite Course"
+         verbose_name_plural="8. Formations favorites"
          constraints=[
              models.UniqueConstraint(fields=['student', 'course'], name='unique_student_course_favorite'),
          ]
@@ -276,7 +276,7 @@ class CourseQuiz(models.Model):
     add_time=models.DateTimeField(auto_now_add=True)
 
     class Meta:
-         verbose_name_plural="13. Course Quiz "
+         verbose_name_plural="13. Questionnaires des formations"
 
 class AttemptQuiz(models.Model):
     student=models.ForeignKey(Student,on_delete=models.CASCADE,null=True)
@@ -298,7 +298,7 @@ class StudyMaterial(models.Model):
     ai_summary=models.TextField(blank=True,default='')
 
     class Meta:
-         verbose_name_plural="15. Course Materials"
+         verbose_name_plural="15. Supports de formation"
 
 class AICachedResponse(models.Model):
     FEATURE_CHOICES = [

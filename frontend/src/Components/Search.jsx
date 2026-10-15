@@ -45,7 +45,7 @@ const Search = () => {
 
   return (
     <div className='container mt-4'>
-    <h3 className=' pb-1 mb-4 mt-5'>Cours correspondant à « {searchstring} »</h3>
+    <h3 className=' pb-1 mb-4 mt-5'>Formations correspondant à « {searchstring} »</h3>
     <div className='row mb-4'>
       {courseData && courseData.map((course,index) =>
       

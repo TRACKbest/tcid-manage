@@ -11,7 +11,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const TeacherMyCourses = () => {
     useEffect(()=>{
-        document.title='TCiD Center | Mes cours'
+        document.title='TCiD Center | Mes formations'
       })
 
       const [courseData, setCourseData]=useState([]);
@@ -21,7 +21,7 @@ const TeacherMyCourses = () => {
 
       useEffect(()=>{
         if (!teacherId) {
-            setErrorMsg('Connectez-vous comme enseignant pour afficher vos cours.')
+            setErrorMsg('Connectez-vous comme formateur pour afficher vos formations.')
             setIsLoading(false)
             return
         }
@@ -29,7 +29,7 @@ const TeacherMyCourses = () => {
             .then((response)=>setCourseData(response.data))
             .catch((error)=>{
                 console.error('Could not load teacher courses:', error.response?.data || error)
-                setErrorMsg('Impossible de charger vos cours. Vérifiez que le serveur Django est démarré.')
+                setErrorMsg('Impossible de charger vos formations. Vérifiez que le serveur Django est démarré.')
             })
             .finally(()=>setIsLoading(false))
       },[teacherId]);
@@ -37,7 +37,7 @@ const TeacherMyCourses = () => {
       const handleDeleteClick = async (course_id) =>{
         const result = await Swal.fire({
             title: 'Confirmer la suppression',
-            text: 'Voulez-vous vraiment supprimer ce cours ?',
+            text: 'Voulez-vous vraiment supprimer cette formation ?',
             icon: 'info',
             confirmButtonText: 'Supprimer',
             cancelButtonText: 'Annuler',
@@ -48,10 +48,10 @@ const TeacherMyCourses = () => {
         try {
             await axios.delete(`${baseUrl}/teacher-course-detail/${course_id}`)
             setCourseData(currentCourses => currentCourses.filter(course => course.id !== course_id))
-            Swal.fire('Cours supprimé', 'Le cours a été supprimé avec succès.', 'success')
+            Swal.fire('Formation supprimée', 'La formation a été supprimée avec succès.', 'success')
         } catch (error) {
             console.error('Could not delete course:', error.response?.data || error)
-            Swal.fire('Échec de la suppression', 'Le cours n’a pas pu être supprimé.', 'error')
+            Swal.fire('Échec de la suppression', 'La formation n’a pas pu être supprimée.', 'error')
         }
     }
     useEffect(() => {
@@ -65,10 +65,10 @@ const TeacherMyCourses = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-journals"></i> Mes cours</h5>
+                    <h5 className='card-header'><i class="bi bi-journals"></i> Mes formations</h5>
                     <div className='card-body' class="table-responsive">
                         {errorMsg && <div className="alert alert-danger" role="alert">{errorMsg}</div>}
-                        {isLoading && <p role="status">Chargement des cours…</p>}
+                        {isLoading && <p role="status">Chargement des formations…</p>}
                         <table className='table table-striped table-hover'>
                             <thead>
                                 <tr>
@@ -79,7 +79,7 @@ const TeacherMyCourses = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {!isLoading && !errorMsg && courseData.length === 0 && <tr><td colSpan="4" className="text-center">Vous n’avez pas encore créé de cours.</td></tr>}
+                                {!isLoading && !errorMsg && courseData.length === 0 && <tr><td colSpan="4" className="text-center">Vous n’avez pas encore créé de formation.</td></tr>}
                                 {courseData.map((course,index) => 
                                     <tr key={course.id}>
                                     <td className='text-center'>

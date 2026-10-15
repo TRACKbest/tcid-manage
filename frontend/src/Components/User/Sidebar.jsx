@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 
 const Sidebar = () => {
   useEffect(()=>{
-    document.title='TCiD Center | Espace étudiant'
+    document.title='TCiD Center | Espace apprenant'
   })
 
   useEffect(() => {
@@ -15,11 +15,11 @@ const Sidebar = () => {
       <div className='card'>
                     <div className='list-group list-group-flush'>
                         <Link to='/user-dashboard' className='list-group-item list-group-item-action'><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link>
-                        <Link to='/my-courses' className='list-group-item list-group-item-action'><i className="bi bi-book me-2" aria-hidden="true"></i>Mes cours</Link>
-                        <Link to='/favorite-courses' className='list-group-item list-group-item-action'><i className="bi bi-heart me-2" aria-hidden="true"></i>Cours favoris</Link>
-                        <Link to='/my-teachers' className='list-group-item list-group-item-action'><i className="bi bi-people me-2" aria-hidden="true"></i>Mes enseignants</Link>
+                        <Link to='/my-courses' className='list-group-item list-group-item-action'><i className="bi bi-book me-2" aria-hidden="true"></i>Mes formations</Link>
+                        <Link to='/favorite-courses' className='list-group-item list-group-item-action'><i className="bi bi-heart me-2" aria-hidden="true"></i>Formations favorites</Link>
+                        <Link to='/my-teachers' className='list-group-item list-group-item-action'><i className="bi bi-people me-2" aria-hidden="true"></i>Mes formateurs</Link>
                         <Link to='/groups' className='list-group-item list-group-item-action'><i className="bi bi-chat-square-text me-2" aria-hidden="true"></i>Mes groupes</Link>
-                        <Link to='/recommended-courses' className='list-group-item list-group-item-action'><i className="bi bi-star me-2" aria-hidden="true"></i>Cours recommandés</Link>
+                        <Link to='/recommended-courses' className='list-group-item list-group-item-action'><i className="bi bi-star me-2" aria-hidden="true"></i>Formations recommandées</Link>
                         <Link to='/my-assignments' className='list-group-item list-group-item-action'><i className="bi bi-clipboard me-2" aria-hidden="true"></i>Mes devoirs</Link>
                         <Link to='/profile-setting' className='list-group-item list-group-item-action'><i className="bi bi-gear me-2" aria-hidden="true"></i>Mon profil</Link>
                         <Link to='/change-password' className='list-group-item list-group-item-action'><i className="bi bi-key me-2" aria-hidden="true"></i>Modifier le mot de passe</Link>

@@ -10,7 +10,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 const EnrolledStudents = () => {
 
     useEffect(()=>{
-        document.title='TCiD Center | Étudiants inscrits'
+        document.title='TCiD Center | Apprenants inscrits'
       })
 
       const [studentData, setStudentData]=useState([]);
@@ -35,7 +35,7 @@ const EnrolledStudents = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-people-fill"></i> Liste des étudiants inscrits</h5>
+                    <h5 className='card-header'><i class="bi bi-people-fill"></i> Liste des apprenants inscrits</h5>
                     <div className='card-body' class="table-responsive">
                         <table className='table table-striped table-hover'>
                             <thead>

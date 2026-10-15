@@ -10,7 +10,7 @@ const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const TeacherRegister = () => {
     useEffect(()=>{
-        document.title='TCiD Center | Inscription enseignant';
+        document.title='TCiD Center | Inscription formateur';
     });
 
     useEffect(() => {
@@ -120,7 +120,7 @@ const TeacherRegister = () => {
         <div class="card border-0 shadow rounded-3 my-5">
           <div class="card-body p-4 p-sm-5">
           <div class="text-center wow fadeInUp">
-          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION ENSEIGNANT</h5>
+          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION FORMATEUR</h5>
           </div>            
             {teacherData.status === 'success' && <h3 className='text-center text-success mb-3'>Demande envoyée. Votre compte sera activé après validation par l’administrateur.</h3>}
             {teacherData.status === 'error' && <p className='text-center text-danger mb-3' role="alert">{registrationError}</p>}

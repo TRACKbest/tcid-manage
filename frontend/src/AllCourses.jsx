@@ -17,7 +17,7 @@ const AllCourses = () => {
   }, [])
 
   useEffect(()=>{
-    document.title='TCiD Center | Tous les cours'
+    document.title='TCiD Center | Toutes les formations'
   })
 
   useEffect(() => {
@@ -48,8 +48,8 @@ const AllCourses = () => {
   return (
     <div className='container mt-4'>
     <div class="text-center wow fadeInUp">
-                <h6 class="section-title bg-white text-center text-primary px-3">Cours</h6>
-                <h1 class="mb-5">Tous les cours</h1>
+                <h6 class="section-title bg-white text-center text-primary px-3">Formations</h6>
+                <h1 class="mb-5">Toutes les formations</h1>
     </div>    <div className='row mb-4'>
       {courseData && courseData.map((course,index) =>
       <div className='col-md-3 mb-4'>
