@@ -39,4 +39,6 @@ test('opens the teacher account menu without Bootstrap JavaScript', () => {
 
   fireEvent.click(screen.getByRole('button', { name: /Enseignant/ }));
   expect(screen.getAllByRole('link', { name: /Inscription/ })[0]).toHaveAttribute('href', '/teacher-register');
+  expect(screen.getAllByRole('link', { name: /Connexion/ })[0]).toHaveAttribute('href', '/teacher-login');
+  expect(screen.queryByText('Administration')).not.toBeInTheDocument();
 });

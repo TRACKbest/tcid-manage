@@ -171,7 +171,6 @@ const Header = () => {
                     }
                     </div>
                 </div>
-                <a className="nav-link nav-item" href="/admin/" target="_blank" rel="noreferrer" onClick={closeMenu}><i className="bi bi-lock-fill" aria-hidden="true"></i>Administration</a>
             </div>
         </div>
     </nav> 

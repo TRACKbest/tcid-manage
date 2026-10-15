@@ -119,10 +119,26 @@ class LiveClassroomAction(APIView):
             return Response(LiveClassroomSerializer(classroom).data)
 
         if action == 'end':
-            classroom.status = models.LiveClassroom.STATUS_ENDED
-            classroom.ended_at = timezone.now()
-            classroom.save(update_fields=['status', 'ended_at'])
-            _broadcast(classroom.id, {'type': 'session_ended'})
+            should_broadcast_end = False
+            with transaction.atomic():
+                classroom = get_object_or_404(
+                    models.LiveClassroom.objects.select_for_update().select_related('course'),
+                    pk=classroom_id,
+                )
+                if classroom.status != models.LiveClassroom.STATUS_ENDED:
+                    was_live = classroom.status == models.LiveClassroom.STATUS_LIVE
+                    classroom.status = models.LiveClassroom.STATUS_ENDED
+                    classroom.ended_at = timezone.now()
+                    classroom.save(update_fields=['status', 'ended_at'])
+                    if was_live:
+                        _notify_enrolled_students(
+                            classroom,
+                            'Classe virtuelle terminée',
+                            f'La session « {classroom.title} » du cours {classroom.course.title} est terminée.',
+                        )
+                        should_broadcast_end = True
+            if should_broadcast_end:
+                _broadcast(classroom.id, {'type': 'session_ended'})
             return Response(LiveClassroomSerializer(classroom).data)
 
         return Response({'detail': 'Unknown session action.'}, status=status.HTTP_404_NOT_FOUND)

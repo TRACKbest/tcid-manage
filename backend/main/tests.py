@@ -232,6 +232,34 @@ class LiveClassroomApiTests(TestCase):
 		)
 		self.assertEqual(duplicate_response.status_code, 409)
 
+		end_response = self.client.post(
+			f'/api/live-classrooms/{classroom_id}/end/',
+			{'teacher_id': self.teacher.pk},
+			format='json',
+		)
+		self.assertEqual(end_response.status_code, 200, end_response.data)
+		ended_notification = Notification.objects.get(
+			student=self.student,
+			subject='Classe virtuelle terminée',
+		)
+		self.assertIn('est terminée', ended_notification.message)
+		self.assertEqual(ended_notification.link, f'/live-classroom/{self.course.pk}')
+		self.assertFalse(Notification.objects.filter(
+			student=self.pending_student,
+			subject='Classe virtuelle terminée',
+		).exists())
+
+		repeated_end_response = self.client.post(
+			f'/api/live-classrooms/{classroom_id}/end/',
+			{'teacher_id': self.teacher.pk},
+			format='json',
+		)
+		self.assertEqual(repeated_end_response.status_code, 200, repeated_end_response.data)
+		self.assertEqual(
+			Notification.objects.filter(student=self.student, subject='Classe virtuelle terminée').count(),
+			1,
+		)
+
 	def test_non_enrolled_student_cannot_list_classroom_sessions(self):
 		response = self.client.get(
 			f'/api/courses/{self.course.pk}/live-classrooms/?student_id={self.pending_student.pk}')
