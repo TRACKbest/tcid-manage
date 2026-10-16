@@ -1,10 +1,13 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import confirmLogout from '../confirmLogout'
 
 const Sidebar = () => {
-  const confirmLogout = (event) => {
-    if (!window.confirm('Voulez-vous vraiment vous déconnecter ?')) event.preventDefault()
+  const navigate = useNavigate()
+  const confirmUserLogout = async (event) => {
+    event.preventDefault()
+    if (await confirmLogout()) navigate('/user-logout')
   }
 
   useEffect(()=>{
@@ -27,7 +30,7 @@ const Sidebar = () => {
                         <Link to='/my-assignments' className='list-group-item list-group-item-action'><i className="bi bi-clipboard me-2" aria-hidden="true"></i>Mes devoirs</Link>
                         <Link to='/profile-setting' className='list-group-item list-group-item-action'><i className="bi bi-gear me-2" aria-hidden="true"></i>Mon profil</Link>
                         <Link to='/change-password' className='list-group-item list-group-item-action'><i className="bi bi-key me-2" aria-hidden="true"></i>Modifier le mot de passe</Link>
-                        <Link to='/user-logout' onClick={confirmLogout} className='list-group-item list-group-item-action text-danger'><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link>
+                        <Link to='/user-logout' onClick={confirmUserLogout} className='list-group-item list-group-item-action text-danger'><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link>
                     </div>
          </div>
   )

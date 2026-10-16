@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import './AdminConsole.css'
 import RichTextEditor from './RichTextEditor'
+import confirmLogout from './confirmLogout'
 
 const apiBase = process.env.REACT_APP_API_URL || `${window.location.protocol}//${window.location.hostname}:8000/api`
 
@@ -447,7 +448,7 @@ function AdminConsole() {
   }
 
   const logout = async () => {
-    if (!window.confirm('Voulez-vous vraiment vous déconnecter de l’administration ?')) return
+    if (!(await confirmLogout('Vous allez quitter la console d’administration.'))) return
     try {
       await adminRequest('logout/', { method: 'POST' })
     } finally {

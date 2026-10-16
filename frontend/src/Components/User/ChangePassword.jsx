@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import axios from 'axios'
 import { useState } from 'react'
 import Swal from 'sweetalert2'
+import confirmLogout from '../confirmLogout'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
@@ -44,9 +45,9 @@ const ChangePassword = () => {
                             showConfirmButton: false
                         
                         });
-                        if (window.confirm('Mot de passe modifié. Voulez-vous vous déconnecter maintenant ?')) {
-                            window.location.href='/user-logout';
-                        }
+                        confirmLogout('Votre mot de passe a été modifié.').then((confirmed) => {
+                            if (confirmed) window.location.href='/user-logout'
+                        })
                     }else{
                         Swal.fire({
                             title:'Erreur : veuillez réessayer.',

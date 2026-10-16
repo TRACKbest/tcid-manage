@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import confirmLogout from './confirmLogout'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
@@ -37,12 +38,11 @@ const Header = () => {
     setOpenAccountMenu('')
   }
 
-  const confirmLogout = (event) => {
-    if (!window.confirm('Voulez-vous vraiment vous déconnecter ?')) {
-      event.preventDefault()
-      return
-    }
+  const confirmLogoutNavigation = async (event, path) => {
+    event.preventDefault()
+    if (!(await confirmLogout())) return
     closeMenu()
+    navigate(path)
   }
   
   useEffect(() => {
@@ -157,7 +157,7 @@ const Header = () => {
                     {teacherLoginStatus ==='true' && 
                     <>
                       <li><Link className="dropdown-item" onClick={closeMenu} to="/teacher-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
-                      <li><Link className="dropdown-item" onClick={confirmLogout} to="/teacher-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={(event) => confirmLogoutNavigation(event, '/teacher-logout')} to="/teacher-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
                     </>
                     }
                     </div>
@@ -174,7 +174,7 @@ const Header = () => {
                     {studentLoginStatus === 'true' &&
                     <>
                       <li><Link className="dropdown-item" onClick={closeMenu} to="/user-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
-                      <li><Link className="dropdown-item" onClick={confirmLogout} to="/user-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={(event) => confirmLogoutNavigation(event, '/user-logout')} to="/user-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
                     </>
                     }
                     </div>

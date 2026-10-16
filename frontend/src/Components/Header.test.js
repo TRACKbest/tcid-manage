@@ -7,8 +7,12 @@ jest.mock('axios', () => ({
   post: jest.fn(),
 }));
 
+jest.mock('./confirmLogout', () => jest.fn());
+import confirmLogout from './confirmLogout';
+
 beforeEach(() => {
   localStorage.clear();
+  confirmLogout.mockReset();
 });
 
 test('opens and closes the mobile navigation menu', () => {
@@ -43,10 +47,10 @@ test('opens the teacher account menu without Bootstrap JavaScript', () => {
   expect(screen.queryByText('Administration')).not.toBeInTheDocument();
 });
 
-test('keeps a teacher signed in when logout confirmation is cancelled', () => {
+test('keeps a teacher signed in when the styled logout confirmation is cancelled', async () => {
   localStorage.setItem('teacherLoginStatus', 'true');
   localStorage.setItem('teacherId', '7');
-  const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+  confirmLogout.mockResolvedValue(false);
 
   render(
     <MemoryRouter>
@@ -57,9 +61,7 @@ test('keeps a teacher signed in when logout confirmation is cancelled', () => {
   fireEvent.click(screen.getByRole('button', { name: /Formateur/ }));
   fireEvent.click(screen.getByRole('link', { name: /Déconnexion/ }));
 
-  expect(confirmSpy).toHaveBeenCalledWith('Voulez-vous vraiment vous déconnecter ?');
+  expect(confirmLogout).toHaveBeenCalledTimes(1);
   expect(localStorage.getItem('teacherLoginStatus')).toBe('true');
   expect(localStorage.getItem('teacherId')).toBe('7');
-
-  confirmSpy.mockRestore();
 });
