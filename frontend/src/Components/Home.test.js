@@ -4,7 +4,9 @@ import { MemoryRouter } from 'react-router-dom'
 import axios from 'axios'
 import Home from './Home'
 
-jest.mock('axios')
+jest.mock('axios', () => ({
+  get: jest.fn(),
+}))
 
 test('renders popular courses returned as direct course records', async () => {
   axios.get.mockImplementation((url) => {
@@ -28,7 +30,8 @@ test('renders popular courses returned as direct course records', async () => {
 
   render(<MemoryRouter><Home /></MemoryRouter>)
 
-  const popularCourse = await screen.findByRole('link', { name: 'Formation la plus suivie' })
-  expect(popularCourse).toHaveAttribute('href', '/detail/42')
+  const popularCourseLinks = await screen.findAllByRole('link', { name: 'Formation la plus suivie' })
+  expect(popularCourseLinks).toHaveLength(2)
+  popularCourseLinks.forEach((link) => expect(link).toHaveAttribute('href', '/detail/42'))
   expect(screen.getByText('12')).toBeInTheDocument()
 })
