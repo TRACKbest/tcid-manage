@@ -144,6 +144,53 @@ class PopularContentTests(TestCase):
 		self.assertNotIn(without_course.id, [item['id'] for item in response.data])
 
 
+class MyTeacherListTests(TestCase):
+	def test_returns_all_approved_courses_for_the_student(self):
+		category = CourseCategory.objects.create(title='Programming')
+		teacher = Teacher.objects.create(
+			full_name='Ada Lovelace',
+			email='ada@example.com',
+			qualification='Computer science',
+			mobile_no='1234567890',
+		)
+		student = Student.objects.create(
+			fullname='Grace Hopper',
+			email='grace@example.com',
+			username='grace',
+			interseted_categories='Programming',
+		)
+		approved_courses = [
+			Course.objects.create(category=category, teacher=teacher, title=title, description='Course description')
+			for title in ('Python', 'Django')
+		]
+		pending_course = Course.objects.create(
+			category=category,
+			teacher=teacher,
+			title='Pending course',
+			description='Course description',
+		)
+		for course in approved_courses:
+			StudentCourseEnrollment.objects.create(
+				course=course,
+				student=student,
+				status=StudentCourseEnrollment.STATUS_APPROVED,
+			)
+		StudentCourseEnrollment.objects.create(
+			course=pending_course,
+			student=student,
+			status=StudentCourseEnrollment.STATUS_PENDING,
+		)
+
+		response = APIClient().get(f'/api/fetch-my-teachers/{student.id}')
+
+		self.assertEqual(response.status_code, 200)
+		self.assertCountEqual(
+			[item['title'] for item in response.data],
+			[course.title for course in approved_courses],
+		)
+		self.assertTrue(all(item['teacher']['id'] == teacher.id for item in response.data))
+
+
 class CourseEngagementTests(TestCase):
 	def setUp(self):
 		self.client = APIClient()

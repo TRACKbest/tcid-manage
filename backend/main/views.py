@@ -836,9 +836,7 @@ class MyTeacherList(generics.ListAPIView):
     serializer_class=CourseSerializer
 
     def get_queryset(self):
-        if 'student_id' in self.kwargs:
-            student_id=self.kwargs['student_id']
-            sql=f"SELECT * FROM main_course as c,main_studentcourseenrollment as e,main_teacher as t WHERE c.teacher_id=t.id AND e.course_id=c.id AND e.student_id={student_id} GROUP BY c.teacher_id"
-            qs=models.Course.objects.raw(sql)
-            print(qs)
-            return qs
+        return models.Course.objects.filter(
+            enrolled_courses__student_id=self.kwargs['student_id'],
+            enrolled_courses__status=models.StudentCourseEnrollment.STATUS_APPROVED,
+        ).select_related('teacher').distinct().order_by('teacher__full_name', 'title')

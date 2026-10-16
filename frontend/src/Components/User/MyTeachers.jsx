@@ -15,12 +15,40 @@ const MyTeachers = () => {
     const location = useLocation()
     const handledNotificationRef = useRef('')
     const [teacherData,setteacherData]=useState([])
+    const [isLoading,setIsLoading]=useState(true)
+    const [loadError,setLoadError]=useState('')
 
     useEffect(()=>{
-        if (!studentId) return
+        if (!studentId) {
+            setteacherData([])
+            setLoadError('Connectez-vous comme apprenant pour afficher vos formateurs.')
+            setIsLoading(false)
+            return
+        }
+        let cancelled = false
+        setIsLoading(true)
         axios.get(`${baseUrl}/fetch-my-teachers/${studentId}`)
-            .then((response)=>setteacherData(response.data))
-            .catch((error)=>console.error('Could not load teachers:', error.response?.data || error))
+            .then((response)=>{
+                const teachers = new Map()
+                response.data.forEach(course => {
+                    const teacher = course.teacher
+                    if (!teacher?.id) return
+                    if (!teachers.has(teacher.id)) teachers.set(teacher.id, { teacher, courses: [] })
+                    teachers.get(teacher.id).courses.push(course)
+                })
+                if (!cancelled) {
+                    setteacherData(Array.from(teachers.values()))
+                    setLoadError('')
+                }
+            })
+            .catch((error)=>{
+                console.error('Could not load teachers:', error.response?.data || error)
+                if (!cancelled) setLoadError('Impossible de charger vos formateurs et formations suivies.')
+            })
+            .finally(()=>{
+                if (!cancelled) setIsLoading(false)
+            })
+        return () => { cancelled = true }
       },[studentId]);
 
     useEffect(() => {
@@ -47,27 +75,26 @@ const MyTeachers = () => {
         });
       }
 
-      const formSubmit=(teacher_id)=>{
+      const formSubmit=async (teacher_id)=>{
+        if (!msgData.msg_to.trim()) return
         const _formData=new FormData()
         _formData.append('msg_to',msgData.msg_to);
         _formData.append('msg_from','student');
 
         try{
-            axios.post(baseUrl+'/send-message/'+teacher_id+'/'+studentId,_formData)
-            .then((res)=>{
-                if(res.data.bool === true){
-                    setMsgData({
-                        'msg_to':''
-                    })
-                    setsuccessMsg(res.data.msg)
-                    seterrorMsg('')
-                }else{
-                    setsuccessMsg('')
-                    seterrorMsg(res.data.msg)
-                }
-            });
+            const response = await axios.post(`${baseUrl}/send-message/${teacher_id}/${studentId}`,_formData)
+            if(response.data.bool === true){
+                setMsgData({ msg_to: '' })
+                setsuccessMsg(response.data.msg)
+                seterrorMsg('')
+            }else{
+                setsuccessMsg('')
+                seterrorMsg(response.data.msg)
+            }
         }catch(error){
-            console.log(error);
+            console.error('Could not send message:', error.response?.data || error)
+            setsuccessMsg('')
+            seterrorMsg('Impossible d’envoyer le message.')
         }
       };
 
@@ -93,24 +120,33 @@ const MyTeachers = () => {
                         <table className='table table-striped table-hover'>
                             <thead>
                                     <tr>
-                                    <th  className='text-center'>Photo</th>
-                                    <th className='text-center'>Nom</th>
-                                    <th className='text-center'>Discussion</th>
+                                    <th className='text-center'>Profil</th>
+                                    <th className='text-center'>Formateur</th>
+                                    <th className='text-center'>Formations suivies</th>
+                                    <th className='text-center'>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
-                            {teacherData.map((row,index) =>
+                            {isLoading && <tr><td colSpan="4" className="text-center" role="status">Chargement de vos formateurs…</td></tr>}
+                            {!isLoading && loadError && <tr><td colSpan="4"><div className="alert alert-danger mb-0" role="alert">{loadError}</div></td></tr>}
+                            {!isLoading && !loadError && teacherData.length === 0 && <tr><td colSpan="4" className="text-center">Aucun formateur pour le moment. Les formateurs apparaîtront ici après approbation de l’accès à une formation.</td></tr>}
+                            {teacherData.map((row) =>
                                 <tr key={row.teacher.id}>
-                                    <td  className='text-center'><Link to={`/teacher-detail/`+row.teacher.id}><img className='imgmeet' src={row.teacher.profile_img} alt={row.teacher.full_name}/></Link></td>
-                                    <td className='text-center'><Link to={`/teacher-detail/`+row.teacher.id}>{row.teacher.full_name}</Link></td>
+                                    <td className='text-center'><Link to={`/teacher-detail/${row.teacher.id}`}><img className='imgmeet' src={row.teacher.profile_img || '/img/default-profile.png'} alt={row.teacher.full_name}/></Link></td>
+                                    <td className='text-center'><Link to={`/teacher-detail/${row.teacher.id}`}>{row.teacher.full_name}</Link></td>
                                     <td className='text-center'>
-                                    <button id={`open-teacher-chat-${row.teacher.id}`} data-bs-toggle="modal" data-bs-target={`#msgModal${index}`} className='btn btn-sm btn-success mb-2'><i className="bi bi-whatsapp"></i></button>
+                                        <div className="d-flex flex-column gap-1">
+                                            {row.courses.map(course => <Link key={course.id} to={`/detail/${course.id}`}>{course.title}</Link>)}
+                                        </div>
+                                    </td>
+                                    <td className='text-center'>
+                                    <button id={`open-teacher-chat-${row.teacher.id}`} type="button" aria-label={`Ouvrir la conversation avec ${row.teacher.full_name}`} title={`Envoyer un message à ${row.teacher.full_name}`} data-bs-toggle="modal" data-bs-target={`#teacher-chat-modal-${row.teacher.id}`} className='btn btn-sm btn-success mb-2'><i className="bi bi-chat-dots" aria-hidden="true"></i></button>
 
-<div className="modal fade" id={`msgModal${index}`} tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div className="modal fade" id={`teacher-chat-modal-${row.teacher.id}`} tabIndex="-1" aria-labelledby={`teacher-chat-title-${row.teacher.id}`} aria-hidden="true">
 <div className="modal-dialog  modal-fullscreen">
     <div className="modal-content">
     <div className="modal-header">
-        <div className="modal-title chat-contact" id="exampleModalLabel">
+        <div className="modal-title chat-contact" id={`teacher-chat-title-${row.teacher.id}`}>
             {row.teacher.profile_img ? <img className="chat-contact-avatar" src={row.teacher.profile_img} alt="" /> : <span className="chat-contact-avatar chat-contact-avatar--fallback" aria-hidden="true">{row.teacher.full_name?.charAt(0)}</span>}
             <div><h5 className="mb-0">{row.teacher.full_name}</h5><small className="text-muted">Formateur</small></div>
         </div>
@@ -123,14 +159,14 @@ const MyTeachers = () => {
                 <MessageStudent teacher_id={row.teacher.id} student_id={studentId}/>
             </div>
             <div className='col-md-4 col-12'>
-                {successMsg && <p className='text-success'>{successMsg}</p>}
-                {errorMsg && <p className='text-danger'>{errorMsg}</p>}
+                {successMsg && <p className='text-success' role="status">{successMsg}</p>}
+                {errorMsg && <p className='text-danger' role="alert">{errorMsg}</p>}
             <form className="chat-composer" onSubmit={(event)=>{event.preventDefault(); formSubmit(row.teacher.id)}}>
                 <div className="mb-3">
-                    <label for={`message-${row.teacher.id}`} className="form-label">Message</label>
+                    <label htmlFor={`message-${row.teacher.id}`} className="form-label">Message</label>
                     <textarea id={`message-${row.teacher.id}`} className='form-control' value={msgData.msg_to} name='msg_to' rows="2" placeholder="Écrire un message..." onChange={handleChange}></textarea>
                 </div>
-                <button type="submit" className="btn btn-success chat-send-button" aria-label="Envoyer le message" title="Envoyer le message">
+                <button type="submit" disabled={!msgData.msg_to.trim()} className="btn btn-success chat-send-button" aria-label="Envoyer le message" title="Envoyer le message">
                     <i className="bi bi-send-fill" aria-hidden="true"></i><span>Envoyer</span>
                 </button>
             </form>
