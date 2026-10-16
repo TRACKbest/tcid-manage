@@ -46,11 +46,6 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   const socketRef = useRef(null)
   const localStreamRef = useRef(null)
   const screenStreamRef = useRef(null)
-  const screenShareTrackRef = useRef(null)
-  const screenCompositeStreamRef = useRef(null)
-  const screenCompositeFrameRef = useRef(null)
-  const screenSourceVideoRef = useRef(null)
-  const cameraSourceVideoRef = useRef(null)
   const peerConnectionsRef = useRef(new Map())
   const pendingCandidatesRef = useRef(new Map())
   const canvasRef = useRef(null)
@@ -59,7 +54,6 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   const localVideoRef = useRef(null)
   const localVideoTileRef = useRef(null)
   const remoteVideoRefs = useRef(new Map())
-  const cameraPictureInPictureRef = useRef(null)
   const [peerId, setPeerId] = useState('')
   const [participants, setParticipants] = useState([])
   const [remoteStreams, setRemoteStreams] = useState({})
@@ -191,7 +185,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
         }
         const connection = new RTCPeerConnection(rtcConfiguration)
         const audioTracks = localStreamRef.current?.getAudioTracks() || []
-        const videoTrack = screenShareTrackRef.current || screenStreamRef.current?.getVideoTracks()[0]
+        const videoTrack = screenStreamRef.current?.getVideoTracks()[0]
           || localStreamRef.current?.getVideoTracks()[0]
         const mediaStream = localStreamRef.current || new MediaStream()
         audioTracks.forEach((track) => connection.addTrack(track, mediaStream))
@@ -334,10 +328,6 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
       peerConnections.clear()
       localStreamRef.current?.getTracks().forEach((track) => track.stop())
       screenStreamRef.current?.getTracks().forEach((track) => track.stop())
-      screenCompositeStreamRef.current?.getTracks().forEach((track) => track.stop())
-      if (screenCompositeFrameRef.current) cancelAnimationFrame(screenCompositeFrameRef.current)
-      if (screenSourceVideoRef.current) screenSourceVideoRef.current.srcObject = null
-      if (cameraSourceVideoRef.current) cameraSourceVideoRef.current.srcObject = null
     }
   }, [classroom.id, joinInfo.token, participantId, role])
 
@@ -393,25 +383,11 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
     const screenStream = screenStreamRef.current
     if (!screenStream) return
     screenStreamRef.current = null
-    screenShareTrackRef.current = null
     const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null
     for (const connection of peerConnectionsRef.current.values()) {
       const sender = connection.getSenders().find((item) => item.track?.kind === 'video')
+        || connection.getTransceivers().find((item) => item.receiver.track.kind === 'video')?.sender
       if (sender) await sender.replaceTrack(cameraTrack)
-    }
-    if (screenCompositeFrameRef.current) cancelAnimationFrame(screenCompositeFrameRef.current)
-    screenCompositeFrameRef.current = null
-    screenCompositeStreamRef.current?.getTracks().forEach((track) => track.stop())
-    screenCompositeStreamRef.current = null
-    if (screenSourceVideoRef.current) {
-      screenSourceVideoRef.current.pause()
-      screenSourceVideoRef.current.srcObject = null
-      screenSourceVideoRef.current = null
-    }
-    if (cameraSourceVideoRef.current) {
-      cameraSourceVideoRef.current.pause()
-      cameraSourceVideoRef.current.srcObject = null
-      cameraSourceVideoRef.current = null
     }
     screenStream.getTracks().forEach((track) => track.stop())
     if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current
@@ -429,71 +405,10 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
       const screenTrack = stream.getVideoTracks()[0]
       if (!screenTrack) throw new Error('Aucun écran n’a été sélectionné.')
       screenStreamRef.current = stream
-
-      const screenVideo = document.createElement('video')
-      screenVideo.muted = true
-      screenVideo.playsInline = true
-      screenSourceVideoRef.current = screenVideo
-      const metadataReady = new Promise((resolve) => screenVideo.addEventListener('loadedmetadata', resolve, { once: true }))
-      screenVideo.srcObject = stream
-      await screenVideo.play()
-      await metadataReady
-
-      const cameraTrack = localStreamRef.current?.getVideoTracks()[0]
-      const cameraVideo = document.createElement('video')
-      cameraVideo.muted = true
-      cameraVideo.playsInline = true
-      cameraSourceVideoRef.current = cameraVideo
-      if (cameraTrack) {
-        cameraVideo.srcObject = new MediaStream([cameraTrack])
-        await cameraVideo.play().catch(() => {})
-      }
-
-      const canvas = document.createElement('canvas')
-      canvas.width = screenVideo.videoWidth || 1280
-      canvas.height = screenVideo.videoHeight || 720
-      const context = canvas.getContext('2d')
-      if (!context || !canvas.captureStream) throw new Error('La composition vidéo n’est pas disponible dans ce navigateur.')
-
-      const drawCompositeFrame = () => {
-        const width = screenVideo.videoWidth || canvas.width
-        const height = screenVideo.videoHeight || canvas.height
-        if (canvas.width !== width || canvas.height !== height) {
-          canvas.width = width
-          canvas.height = height
-        }
-        if (screenVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-          context.drawImage(screenVideo, 0, 0, canvas.width, canvas.height)
-          if (cameraTrack?.enabled && cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-            const diameter = Math.min(canvas.width * 0.2, canvas.height * 0.34)
-            const margin = Math.max(20, canvas.width * 0.035)
-            const x = canvas.width - diameter - margin
-            const y = canvas.height - diameter - margin
-            context.save()
-            context.beginPath()
-            context.arc(x + diameter / 2, y + diameter / 2, diameter / 2, 0, Math.PI * 2)
-            context.clip()
-            context.drawImage(cameraVideo, x, y, diameter, diameter)
-            context.restore()
-            context.beginPath()
-            context.arc(x + diameter / 2, y + diameter / 2, diameter / 2, 0, Math.PI * 2)
-            context.lineWidth = Math.max(4, canvas.width * 0.004)
-            context.strokeStyle = '#ffffff'
-            context.stroke()
-          }
-        }
-        screenCompositeFrameRef.current = requestAnimationFrame(drawCompositeFrame)
-      }
-
-      const compositeStream = canvas.captureStream(30)
-      const compositeTrack = compositeStream.getVideoTracks()[0]
-      screenShareTrackRef.current = compositeTrack
-      screenCompositeStreamRef.current = compositeStream
-      drawCompositeFrame()
-
       for (const connection of peerConnectionsRef.current.values()) {
         const sender = connection.getSenders().find((item) => item.track?.kind === 'video')
-        if (sender) await sender.replaceTrack(compositeTrack)
+          || connection.getTransceivers().find((item) => item.receiver.track.kind === 'video')?.sender
+        if (sender) await sender.replaceTrack(screenTrack)
       }
       screenTrack.onended = () => { stopScreenShare() }
       setSharingScreen(true)
@@ -661,21 +576,6 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
             >
               <video autoPlay muted playsInline ref={localVideoRef} />
               {!sharingScreen && (!cameraAvailable || !cameraEnabled) && <div className="live-video-placeholder"><i className="bi bi-person-video3" aria-hidden="true" /><span>{cameraAvailable ? 'Caméra désactivée' : 'Caméra indisponible — appuyez sur Caméra pour réessayer'}</span></div>}
-              {sharingScreen && cameraAvailable && cameraEnabled && (
-                <video
-                  autoPlay
-                  className="live-camera-picture-in-picture"
-                  muted
-                  playsInline
-                  ref={(element) => {
-                    cameraPictureInPictureRef.current = element
-                    if (element && localStreamRef.current && element.srcObject !== localStreamRef.current) {
-                      element.srcObject = localStreamRef.current
-                      element.play().catch(() => {})
-                    }
-                  }}
-                />
-              )}
               {sharingScreen && (
                 <button
                   aria-label={fullscreenVideoId === 'local' ? 'Quitter le plein écran' : 'Afficher le partage en plein écran'}

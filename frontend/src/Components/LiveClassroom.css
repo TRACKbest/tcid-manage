@@ -396,22 +396,6 @@
   object-fit: contain;
 }
 
-.live-camera-picture-in-picture {
-  position: absolute;
-  z-index: 2;
-  right: 0.75rem;
-  bottom: 0.75rem;
-  width: clamp(5rem, 13vw, 9rem) !important;
-  height: auto !important;
-  aspect-ratio: 1;
-  border: 3px solid #fff;
-  border-radius: 50%;
-  background: #172326;
-  object-fit: cover !important;
-  transform: scaleX(-1);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-}
-
 .live-video-fullscreen {
   position: absolute;
   z-index: 3;
@@ -432,10 +416,6 @@
 .live-video-fullscreen:hover,
 .live-video-fullscreen:focus-visible {
   background: #173d3a;
-}
-
-.live-video-tile.is-sharing-screen .live-video-label {
-  right: clamp(6rem, 15vw, 10rem);
 }
 
 .live-video-tile:fullscreen {
