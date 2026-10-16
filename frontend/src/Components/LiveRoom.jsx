@@ -74,6 +74,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   const [mediaError, setMediaError] = useState('')
   const [roomEnded, setRoomEnded] = useState(false)
   const [strokeColor, setStrokeColor] = useState('#00a99d')
+  const [expandedVideo, setExpandedVideo] = useState(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -493,6 +494,16 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
     sendMessage({ type: 'whiteboard_clear' })
   }
 
+  const toggleVideoSize = (videoId) => {
+    setExpandedVideo((current) => current === videoId ? null : videoId)
+  }
+
+  const handleVideoKeyDown = (event, videoId) => {
+    if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return
+    event.preventDefault()
+    toggleVideoSize(videoId)
+  }
+
   const remoteParticipants = participants.filter((person) => person.peer_id !== peerId)
   const canModerate = role === 'teacher'
 
@@ -523,13 +534,28 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
       <div className="live-room-layout">
         <section className="live-room-main-column">
           <div className="live-video-grid">
-            <article className="live-video-tile is-local">
+            <article
+              className={`live-video-tile is-local ${expandedVideo === 'local' ? 'is-expanded' : ''}`}
+              onClick={() => toggleVideoSize('local')}
+              onKeyDown={(event) => handleVideoKeyDown(event, 'local')}
+              role="button"
+              tabIndex={0}
+              aria-label={`${expandedVideo === 'local' ? 'Réduire' : 'Agrandir'} votre vidéo`}
+            >
               <video autoPlay muted playsInline ref={localVideoRef} />
               {(!cameraAvailable || !cameraEnabled) && <div className="live-video-placeholder"><i className="bi bi-person-video3" aria-hidden="true" /><span>{cameraAvailable ? 'Caméra désactivée' : 'Caméra indisponible — appuyez sur Caméra pour réessayer'}</span></div>}
               <div className="live-video-label"><span>{joinInfo.display_name} · Vous</span><i className={`bi ${micEnabled ? 'bi-mic-fill' : 'bi-mic-mute-fill'}`} aria-label={micEnabled ? 'Micro activé' : 'Micro coupé'} /></div>
             </article>
             {remoteParticipants.map((person) => (
-              <article className="live-video-tile" key={person.peer_id}>
+              <article
+                className={`live-video-tile ${expandedVideo === person.peer_id ? 'is-expanded' : ''}`}
+                key={person.peer_id}
+                onClick={() => toggleVideoSize(person.peer_id)}
+                onKeyDown={(event) => handleVideoKeyDown(event, person.peer_id)}
+                role="button"
+                tabIndex={0}
+                aria-label={`${expandedVideo === person.peer_id ? 'Réduire' : 'Agrandir'} la vidéo de ${person.display_name}`}
+              >
                 <video
                   autoPlay
                   playsInline
