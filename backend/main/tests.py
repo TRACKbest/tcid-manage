@@ -115,16 +115,31 @@ class PopularContentTests(TestCase):
 		second_most_followed = self.create_teacher(2)
 		no_students = self.create_teacher(3)
 		without_course = self.create_teacher(4)
-		self.add_enrollments(self.create_course(most_followed, 1), approved_count=3, suffix='teacher-one')
-		self.add_enrollments(self.create_course(second_most_followed, 2), approved_count=2, suffix='teacher-two')
-		self.add_enrollments(self.create_course(no_students, 3), pending_count=2, suffix='teacher-three')
+		most_followed_courses = [
+			self.create_course(most_followed, 1),
+			self.create_course(most_followed, 2),
+		]
+		shared_student = Student.objects.create(
+			fullname='Shared Student',
+			email='shared-student@example.com',
+			username='shared-student',
+			interseted_categories='Programming',
+		)
+		for course in most_followed_courses:
+			StudentCourseEnrollment.objects.create(
+				course=course,
+				student=shared_student,
+				status=StudentCourseEnrollment.STATUS_APPROVED,
+			)
+		self.add_enrollments(self.create_course(second_most_followed, 3), approved_count=2, suffix='teacher-two')
+		self.add_enrollments(self.create_course(no_students, 4), pending_count=2, suffix='teacher-three')
 
 		response = self.client.get('/api/popular-teachers/?popular=1')
 
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(
 			[item['id'] for item in response.data],
-			[most_followed.id, second_most_followed.id, no_students.id],
+			[second_most_followed.id, most_followed.id, no_students.id],
 		)
 		self.assertNotIn(without_course.id, [item['id'] for item in response.data])
 

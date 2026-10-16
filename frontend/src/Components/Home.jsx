@@ -234,15 +234,15 @@ try{
                 <div class="col-lg-4 col-md-6 wow fadeInUp">
                     <div class="course-item bg-light">
                         <div class="position-relative overflow-hidden">
-                            <Link to={`/detail/${row.course.id}`}><img src={row.course.featured_img} height={250}  className="card-img-top" alt={row.course.title}/></Link>
+                    <Link to={`/detail/${row.id}`}><img src={row.featured_img} height={250}  className="card-img-top" alt={row.title}/></Link>
                         </div>
                         <div class="text-center p-4 pb-0">
-                            <h5 className="mb-4"><Link to={`/detail/${row.course.id}`}>{row.course.title}</Link></h5>
+                    <h5 className="mb-4"><Link to={`/detail/${row.id}`}>{row.title}</Link></h5>
                         </div>
                         <div class="d-flex border-top">
-                            <small class="flex-fill text-center border-end py-2"><i class="fa fa-user-tie text-primary me-2"></i>{row.course.teacher.full_name}</small>
-                            <small class="flex-fill text-center border-end py-2"><Stars stars={row.rating}/></small>
-                            <small class="flex-fill text-center py-2"><i class="fa fa-eye text-primary me-2"></i>{row.course.course_views}</small>
+                    <small class="flex-fill text-center border-end py-2"><i class="fa fa-user-tie text-primary me-2"></i>{row.teacher.full_name}</small>
+                    <small class="flex-fill text-center border-end py-2"><Stars stars={row.course_rating}/></small>
+                    <small class="flex-fill text-center py-2"><i class="fa fa-user text-primary me-2"></i>{row.total_enrolled_students}</small>
                         </div>
                     </div>
                 </div>

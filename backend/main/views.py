@@ -35,7 +35,7 @@ class TeacherList(generics.ListCreateAPIView):
         if 'popular' in self.request.GET:
             return models.Teacher.objects.annotate(
                 popular_student_count=Count(
-                    'teacher_courses__enrolled_courses',
+                    'teacher_courses__enrolled_courses__student_id',
                     filter=Q(teacher_courses__enrolled_courses__status=models.StudentCourseEnrollment.STATUS_APPROVED),
                     distinct=True,
                 ),
@@ -121,7 +121,7 @@ class PopularCourseList(generics.ListAPIView):
     def get_queryset(self):
         courses = models.Course.objects.annotate(
             popular_student_count=Count(
-                'enrolled_courses',
+                'enrolled_courses__student_id',
                 filter=Q(enrolled_courses__status=models.StudentCourseEnrollment.STATUS_APPROVED),
                 distinct=True,
             ),
