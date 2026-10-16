@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
 
 const TeacherSidebar = () => {
+  const confirmLogout = (event) => {
+    if (!window.confirm('Voulez-vous vraiment vous déconnecter ?')) event.preventDefault()
+  }
+
   useEffect(()=>{
     document.title='TCiD Center | Espace formateur'
   })
@@ -17,7 +21,7 @@ const TeacherSidebar = () => {
                         <Link to='/groups' className='list-group-item list-group-item-action'><i className="bi bi-chat-square-text me-2" aria-hidden="true"></i>Mes groupes</Link>
                         <Link to='/teacher-profile-setting' className='list-group-item list-group-item-action'><i className="bi bi-gear me-2" aria-hidden="true"></i>Mon profil</Link>
                         <Link to='/teacher-change-password' className='list-group-item list-group-item-action'><i className="bi bi-key me-2" aria-hidden="true"></i>Modifier le mot de passe</Link>
-                        <Link to='/teacher-logout' className='list-group-item list-group-item-action text-danger'><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link>
+                        <Link to='/teacher-logout' onClick={confirmLogout} className='list-group-item list-group-item-action text-danger'><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link>
                     </div>
          </div>
   )

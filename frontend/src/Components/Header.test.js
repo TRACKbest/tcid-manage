@@ -42,3 +42,24 @@ test('opens the teacher account menu without Bootstrap JavaScript', () => {
   expect(screen.getAllByRole('link', { name: /Connexion/ })[0]).toHaveAttribute('href', '/teacher-login');
   expect(screen.queryByText('Administration')).not.toBeInTheDocument();
 });
+
+test('keeps a teacher signed in when logout confirmation is cancelled', () => {
+  localStorage.setItem('teacherLoginStatus', 'true');
+  localStorage.setItem('teacherId', '7');
+  const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+  render(
+    <MemoryRouter>
+      <Header />
+    </MemoryRouter>,
+  );
+
+  fireEvent.click(screen.getByRole('button', { name: /Formateur/ }));
+  fireEvent.click(screen.getByRole('link', { name: /Déconnexion/ }));
+
+  expect(confirmSpy).toHaveBeenCalledWith('Voulez-vous vraiment vous déconnecter ?');
+  expect(localStorage.getItem('teacherLoginStatus')).toBe('true');
+  expect(localStorage.getItem('teacherId')).toBe('7');
+
+  confirmSpy.mockRestore();
+});

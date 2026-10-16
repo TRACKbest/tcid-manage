@@ -44,7 +44,9 @@ const TeacherChangePassword = () => {
                             showConfirmButton: false
                         
                         });
-                        window.location.href='/teacher-logout';
+                        if (window.confirm('Mot de passe modifié. Voulez-vous vous déconnecter maintenant ?')) {
+                            window.location.href='/teacher-logout';
+                        }
                     }else{
                         Swal.fire({
                             title:'Erreur : veuillez réessayer.',

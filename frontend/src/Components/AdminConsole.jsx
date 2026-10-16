@@ -447,6 +447,7 @@ function AdminConsole() {
   }
 
   const logout = async () => {
+    if (!window.confirm('Voulez-vous vraiment vous déconnecter de l’administration ?')) return
     try {
       await adminRequest('logout/', { method: 'POST' })
     } finally {

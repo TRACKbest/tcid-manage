@@ -36,6 +36,14 @@ const Header = () => {
     setMenuOpen(false)
     setOpenAccountMenu('')
   }
+
+  const confirmLogout = (event) => {
+    if (!window.confirm('Voulez-vous vraiment vous déconnecter ?')) {
+      event.preventDefault()
+      return
+    }
+    closeMenu()
+  }
   
   useEffect(() => {
     if (!recipientType || !recipientId) {
@@ -149,7 +157,7 @@ const Header = () => {
                     {teacherLoginStatus ==='true' && 
                     <>
                       <li><Link className="dropdown-item" onClick={closeMenu} to="/teacher-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
-                      <li><Link className="dropdown-item" onClick={closeMenu} to="/teacher-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={confirmLogout} to="/teacher-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
                     </>
                     }
                     </div>
@@ -166,7 +174,7 @@ const Header = () => {
                     {studentLoginStatus === 'true' &&
                     <>
                       <li><Link className="dropdown-item" onClick={closeMenu} to="/user-dashboard"><i className="bi bi-speedometer2 me-2" aria-hidden="true"></i>Tableau de bord</Link></li>
-                      <li><Link className="dropdown-item" onClick={closeMenu} to="/user-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={confirmLogout} to="/user-logout"><i className="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Déconnexion</Link></li>
                     </>
                     }
                     </div>

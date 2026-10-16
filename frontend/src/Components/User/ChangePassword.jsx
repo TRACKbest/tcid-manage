@@ -44,7 +44,9 @@ const ChangePassword = () => {
                             showConfirmButton: false
                         
                         });
-                        window.location.href='/user-logout';
+                        if (window.confirm('Mot de passe modifié. Voulez-vous vous déconnecter maintenant ?')) {
+                            window.location.href='/user-logout';
+                        }
                     }else{
                         Swal.fire({
                             title:'Erreur : veuillez réessayer.',
