@@ -12,7 +12,7 @@ from rest_framework import generics
 from django.contrib.flatpages.models import FlatPage
 from . serializers import TeacherSerializer,TeacherStudentChatSerializer,FlatPageSerializer,FaqSerializer,StudyMaterialSerializer,AttempQuizSerializer,QuestionSerializer,CourseQuizSerializer,QuizSerializer,StudentDashboardSerializer,StudentFavoriteCourseSerializer,StudentAssignmentSerializer,CategorySerializer,CourseSerializer,ChapterSerializer,StudentSerializer,StudentCourseEnrollSerializer,CourseRatingSerializer,TeacherDashboardSerializer,NotificationSerializer,GroupMessageSerializer
 from rest_framework import permissions
-from django.db.models import F, Q
+from django.db.models import Count, F, Q
 from . import models
 from .ai_services import extract_material_text, summarize_material
 from rest_framework.pagination import PageNumberPagination
@@ -33,8 +33,18 @@ class TeacherList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         if 'popular' in self.request.GET:
-            sql="SELECT *,COUNT(c.id) as total_course FROM main_teacher as t INNER JOIN main_course as c ON c.teacher_id=t.id GROUP BY t.id ORDER BY total_course desc"  
-            return models.Teacher.objects.raw(sql)
+            return models.Teacher.objects.annotate(
+                popular_student_count=Count(
+                    'teacher_courses__enrolled_courses',
+                    filter=Q(teacher_courses__enrolled_courses__status=models.StudentCourseEnrollment.STATUS_APPROVED),
+                    distinct=True,
+                ),
+                teacher_course_count=Count('teacher_courses', distinct=True),
+            ).filter(
+                teacher_course_count__gt=0,
+            ).order_by(
+                '-popular_student_count', '-teacher_course_count', 'id',
+            )[:3]
         return super().get_queryset()
 
 class TeacherDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -102,6 +112,23 @@ class CourseList(generics.ListCreateAPIView):
             qs=models.Course.objects.filter(Q(title__icontains=search)|Q(description__icontains=search))
         
         return qs
+
+class PopularCourseList(generics.ListAPIView):
+    queryset = models.Course.objects.all()
+    serializer_class = CourseSerializer
+    pagination_class = StandardResultSetPagination
+
+    def get_queryset(self):
+        courses = models.Course.objects.annotate(
+            popular_student_count=Count(
+                'enrolled_courses',
+                filter=Q(enrolled_courses__status=models.StudentCourseEnrollment.STATUS_APPROVED),
+                distinct=True,
+            ),
+        ).order_by('-popular_student_count', '-id')
+        if 'popular' in self.request.GET:
+            return courses[:3]
+        return courses
 
 class TeacherCourseList(generics.ListAPIView):
     serializer_class=CourseSerializer

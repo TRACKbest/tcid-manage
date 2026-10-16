@@ -12,7 +12,7 @@ from rest_framework.test import APIClient, APIRequestFactory
 from .models import AIAssistantQuestion, Course, CourseCategory, CourseQuiz, CourseView, Faq, GroupMembership, GroupMessage, LearningGroup, LiveClassroom, LiveClassPoll, Notification, Quiz, QuizQuestions, Student, StudentAssignment, StudentCourseEnrollment, StudentFavoriteCourse, StudyMaterial, Teacher, TeacherStudentChat
 from .admin_api import _display_value
 from .serializers import CourseSerializer, StudentAssignmentSerializer
-from .views import CourseList, TeacherList
+from .views import CourseList, PopularCourseList, TeacherList
 from lms_api.asgi import application
 
 
@@ -59,6 +59,74 @@ class CourseListTests(TestCase):
 		self.assertIn('<h2 class="ql-align-center">Programme</h2>', cleaned)
 		self.assertIn('<strong>Point clé</strong>', cleaned)
 		self.assertNotIn('<script>', cleaned)
+
+
+class PopularContentTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+		self.category = CourseCategory.objects.create(title='Programming')
+
+	def create_teacher(self, suffix):
+		return Teacher.objects.create(
+			full_name=f'Teacher {suffix}',
+			email=f'teacher-{suffix}@example.com',
+			qualification='Computer science',
+			mobile_no=f'1234567{suffix:03d}',
+		)
+
+	def create_course(self, teacher, suffix):
+		return Course.objects.create(
+			category=self.category,
+			teacher=teacher,
+			title=f'Course {suffix}',
+			description='Course description',
+		)
+
+	def add_enrollments(self, course, approved_count=0, pending_count=0, suffix=''):
+		for index in range(approved_count + pending_count):
+			student = Student.objects.create(
+				fullname=f'Student {suffix}-{index}',
+				email=f'student-{suffix}-{index}@example.com',
+				username=f'student-{suffix}-{index}',
+				interseted_categories='Programming',
+			)
+			status = StudentCourseEnrollment.STATUS_APPROVED if index < approved_count else StudentCourseEnrollment.STATUS_PENDING
+			StudentCourseEnrollment.objects.create(course=course, student=student, status=status)
+
+	def test_popular_courses_include_unrated_courses_ranked_by_approved_enrollments(self):
+		teacher = self.create_teacher(1)
+		courses = [self.create_course(teacher, index) for index in range(4)]
+		self.add_enrollments(courses[0], approved_count=3, suffix='first')
+		self.add_enrollments(courses[1], approved_count=2, suffix='second')
+		self.add_enrollments(courses[2], approved_count=1, suffix='third')
+		self.add_enrollments(courses[3], pending_count=4, suffix='pending')
+
+		response = self.client.get('/api/popular-courses/?popular=1')
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(
+			[item['id'] for item in response.data['results']],
+			[course.id for course in courses[:3]],
+		)
+		self.assertTrue(all(item['course_rating'] is None for item in response.data['results']))
+
+	def test_popular_teachers_rank_by_approved_enrollments_and_include_zero_student_teachers(self):
+		most_followed = self.create_teacher(1)
+		second_most_followed = self.create_teacher(2)
+		no_students = self.create_teacher(3)
+		without_course = self.create_teacher(4)
+		self.add_enrollments(self.create_course(most_followed, 1), approved_count=3, suffix='teacher-one')
+		self.add_enrollments(self.create_course(second_most_followed, 2), approved_count=2, suffix='teacher-two')
+		self.add_enrollments(self.create_course(no_students, 3), pending_count=2, suffix='teacher-three')
+
+		response = self.client.get('/api/popular-teachers/?popular=1')
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(
+			[item['id'] for item in response.data],
+			[most_followed.id, second_most_followed.id, no_students.id],
+		)
+		self.assertNotIn(without_course.id, [item['id'] for item in response.data])
 
 
 class CourseEngagementTests(TestCase):
