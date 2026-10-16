@@ -365,6 +365,19 @@
   border: 1px solid #2e3a3d;
   border-radius: 0.7rem;
   background: #172326;
+  cursor: zoom-in;
+}
+
+.live-video-tile:focus-visible {
+  outline: 3px solid #00a99d;
+  outline-offset: 2px;
+}
+
+.live-video-tile.is-expanded {
+  grid-column: 1 / -1;
+  height: clamp(280px, 58vh, 700px);
+  aspect-ratio: auto;
+  cursor: zoom-out;
 }
 
 .live-video-tile video {

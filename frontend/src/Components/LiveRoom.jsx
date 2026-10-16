@@ -536,7 +536,9 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
           <div className="live-video-grid">
             <article
               className={`live-video-tile is-local ${expandedVideo === 'local' ? 'is-expanded' : ''}`}
-              onClick={() => toggleVideoSize('local')}
+              onClick={(event) => {
+                if (!event.target.closest('button')) toggleVideoSize('local')
+              }}
               onKeyDown={(event) => handleVideoKeyDown(event, 'local')}
               role="button"
               tabIndex={0}
@@ -550,7 +552,9 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
               <article
                 className={`live-video-tile ${expandedVideo === person.peer_id ? 'is-expanded' : ''}`}
                 key={person.peer_id}
-                onClick={() => toggleVideoSize(person.peer_id)}
+                onClick={(event) => {
+                  if (!event.target.closest('button')) toggleVideoSize(person.peer_id)
+                }}
                 onKeyDown={(event) => handleVideoKeyDown(event, person.peer_id)}
                 role="button"
                 tabIndex={0}

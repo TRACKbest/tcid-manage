@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import axios from 'axios'
@@ -14,6 +14,8 @@ import './search.css'
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const Home = () => {
+  const navigate = useNavigate()
+
   useEffect(()=>{
     document.title='TCiD Center'
   })
@@ -75,6 +77,12 @@ try{
       ...searchString,
       [event.target.name]:event.target.value
     });
+  }
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault()
+    const query = searchString.search.trim()
+    if (query) navigate(`/search/${encodeURIComponent(query)}`)
   }
   
   return (
@@ -178,11 +186,11 @@ try{
         </div>
     </div>
       {/*  About Us card */}
-      <div class="input-box container">
+        <form class="input-box container" onSubmit={handleSearchSubmit}>
           <i class="bi bi-search text-info"></i>
-          <input name='search' type="search" onChange={handleChange} placeholder="Rechercher…" aria-label="Rechercher" />
-          <Link className='button' to={'/search/'+searchString.search} type="button">Rechercher</Link>
-      </div>
+          <input name='search' type="search" onChange={handleChange} placeholder="Rechercher…" aria-label="Rechercher" value={searchString.search} />
+          <button className='button' type="submit">Rechercher</button>
+        </form>
 
     <div className='container mt-4'>
       {/* Start Latest Courses*/}
