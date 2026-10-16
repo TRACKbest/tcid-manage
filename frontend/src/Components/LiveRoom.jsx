@@ -46,13 +46,20 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   const socketRef = useRef(null)
   const localStreamRef = useRef(null)
   const screenStreamRef = useRef(null)
+  const screenShareTrackRef = useRef(null)
+  const screenCompositeStreamRef = useRef(null)
+  const screenCompositeFrameRef = useRef(null)
+  const screenSourceVideoRef = useRef(null)
+  const cameraSourceVideoRef = useRef(null)
   const peerConnectionsRef = useRef(new Map())
   const pendingCandidatesRef = useRef(new Map())
   const canvasRef = useRef(null)
   const drawingRef = useRef(null)
   const peerIdRef = useRef('')
   const localVideoRef = useRef(null)
+  const localVideoTileRef = useRef(null)
   const remoteVideoRefs = useRef(new Map())
+  const cameraPictureInPictureRef = useRef(null)
   const [peerId, setPeerId] = useState('')
   const [participants, setParticipants] = useState([])
   const [remoteStreams, setRemoteStreams] = useState({})
@@ -75,6 +82,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   const [roomEnded, setRoomEnded] = useState(false)
   const [strokeColor, setStrokeColor] = useState('#00a99d')
   const [expandedVideo, setExpandedVideo] = useState(null)
+  const [presentationFullscreen, setPresentationFullscreen] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -102,6 +110,14 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
       if (element) element.srcObject = remoteStreams[remotePeerId] || null
     })
   }, [remoteStreams, participants])
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setPresentationFullscreen(document.fullscreenElement === localVideoTileRef.current)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   useEffect(() => {
     let disposed = false
@@ -175,7 +191,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
         }
         const connection = new RTCPeerConnection(rtcConfiguration)
         const audioTracks = localStreamRef.current?.getAudioTracks() || []
-        const videoTrack = screenStreamRef.current?.getVideoTracks()[0]
+        const videoTrack = screenShareTrackRef.current || screenStreamRef.current?.getVideoTracks()[0]
           || localStreamRef.current?.getVideoTracks()[0]
         const mediaStream = localStreamRef.current || new MediaStream()
         audioTracks.forEach((track) => connection.addTrack(track, mediaStream))
@@ -318,6 +334,10 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
       peerConnections.clear()
       localStreamRef.current?.getTracks().forEach((track) => track.stop())
       screenStreamRef.current?.getTracks().forEach((track) => track.stop())
+      screenCompositeStreamRef.current?.getTracks().forEach((track) => track.stop())
+      if (screenCompositeFrameRef.current) cancelAnimationFrame(screenCompositeFrameRef.current)
+      if (screenSourceVideoRef.current) screenSourceVideoRef.current.srcObject = null
+      if (cameraSourceVideoRef.current) cameraSourceVideoRef.current.srcObject = null
     }
   }, [classroom.id, joinInfo.token, participantId, role])
 
@@ -373,10 +393,25 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
     const screenStream = screenStreamRef.current
     if (!screenStream) return
     screenStreamRef.current = null
+    screenShareTrackRef.current = null
     const cameraTrack = localStreamRef.current?.getVideoTracks()[0] || null
     for (const connection of peerConnectionsRef.current.values()) {
       const sender = connection.getSenders().find((item) => item.track?.kind === 'video')
       if (sender) await sender.replaceTrack(cameraTrack)
+    }
+    if (screenCompositeFrameRef.current) cancelAnimationFrame(screenCompositeFrameRef.current)
+    screenCompositeFrameRef.current = null
+    screenCompositeStreamRef.current?.getTracks().forEach((track) => track.stop())
+    screenCompositeStreamRef.current = null
+    if (screenSourceVideoRef.current) {
+      screenSourceVideoRef.current.pause()
+      screenSourceVideoRef.current.srcObject = null
+      screenSourceVideoRef.current = null
+    }
+    if (cameraSourceVideoRef.current) {
+      cameraSourceVideoRef.current.pause()
+      cameraSourceVideoRef.current.srcObject = null
+      cameraSourceVideoRef.current = null
     }
     screenStream.getTracks().forEach((track) => track.stop())
     if (localVideoRef.current) localVideoRef.current.srcObject = localStreamRef.current
@@ -388,18 +423,96 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
       await stopScreenShare()
       return
     }
+
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true })
       const screenTrack = stream.getVideoTracks()[0]
+      if (!screenTrack) throw new Error('Aucun écran n’a été sélectionné.')
       screenStreamRef.current = stream
+
+      const screenVideo = document.createElement('video')
+      screenVideo.muted = true
+      screenVideo.playsInline = true
+      screenSourceVideoRef.current = screenVideo
+      const metadataReady = new Promise((resolve) => screenVideo.addEventListener('loadedmetadata', resolve, { once: true }))
+      screenVideo.srcObject = stream
+      await screenVideo.play()
+      await metadataReady
+
+      const cameraTrack = localStreamRef.current?.getVideoTracks()[0]
+      const cameraVideo = document.createElement('video')
+      cameraVideo.muted = true
+      cameraVideo.playsInline = true
+      cameraSourceVideoRef.current = cameraVideo
+      if (cameraTrack) {
+        cameraVideo.srcObject = new MediaStream([cameraTrack])
+        await cameraVideo.play().catch(() => {})
+      }
+
+      const canvas = document.createElement('canvas')
+      canvas.width = screenVideo.videoWidth || 1280
+      canvas.height = screenVideo.videoHeight || 720
+      const context = canvas.getContext('2d')
+      if (!context || !canvas.captureStream) throw new Error('La composition vidéo n’est pas disponible dans ce navigateur.')
+
+      const drawCompositeFrame = () => {
+        const width = screenVideo.videoWidth || canvas.width
+        const height = screenVideo.videoHeight || canvas.height
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width
+          canvas.height = height
+        }
+        if (screenVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          context.drawImage(screenVideo, 0, 0, canvas.width, canvas.height)
+          if (cameraTrack?.enabled && cameraVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            const diameter = Math.min(canvas.width * 0.2, canvas.height * 0.34)
+            const margin = Math.max(20, canvas.width * 0.035)
+            const x = canvas.width - diameter - margin
+            const y = canvas.height - diameter - margin
+            context.save()
+            context.beginPath()
+            context.arc(x + diameter / 2, y + diameter / 2, diameter / 2, 0, Math.PI * 2)
+            context.clip()
+            context.drawImage(cameraVideo, x, y, diameter, diameter)
+            context.restore()
+            context.beginPath()
+            context.arc(x + diameter / 2, y + diameter / 2, diameter / 2, 0, Math.PI * 2)
+            context.lineWidth = Math.max(4, canvas.width * 0.004)
+            context.strokeStyle = '#ffffff'
+            context.stroke()
+          }
+        }
+        screenCompositeFrameRef.current = requestAnimationFrame(drawCompositeFrame)
+      }
+
+      const compositeStream = canvas.captureStream(30)
+      const compositeTrack = compositeStream.getVideoTracks()[0]
+      screenShareTrackRef.current = compositeTrack
+      screenCompositeStreamRef.current = compositeStream
+      drawCompositeFrame()
+
       for (const connection of peerConnectionsRef.current.values()) {
         const sender = connection.getSenders().find((item) => item.track?.kind === 'video')
-        if (sender) await sender.replaceTrack(screenTrack)
+        if (sender) await sender.replaceTrack(compositeTrack)
       }
       screenTrack.onended = () => { stopScreenShare() }
       setSharingScreen(true)
     } catch (error) {
+      if (screenStreamRef.current) await stopScreenShare()
+      setMediaError(error.message || 'Le partage d’écran n’a pas pu démarrer.')
       console.error('Screen sharing was not started:', error)
+    }
+  }
+
+  const togglePresentationFullscreen = async (event) => {
+    event.stopPropagation()
+    const tile = localVideoTileRef.current
+    if (!tile) return
+    try {
+      if (document.fullscreenElement === tile) await document.exitFullscreen()
+      else await tile.requestFullscreen()
+    } catch (error) {
+      setMediaError('Le plein écran n’est pas disponible dans ce navigateur.')
     }
   }
 
@@ -535,7 +648,8 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
         <section className="live-room-main-column">
           <div className="live-video-grid">
             <article
-              className={`live-video-tile is-local ${expandedVideo === 'local' ? 'is-expanded' : ''}`}
+              className={`live-video-tile is-local ${sharingScreen ? 'is-sharing-screen' : ''} ${expandedVideo === 'local' ? 'is-expanded' : ''}`}
+              ref={localVideoTileRef}
               onClick={(event) => {
                 if (!event.target.closest('button')) toggleVideoSize('local')
               }}
@@ -545,7 +659,35 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
               aria-label={`${expandedVideo === 'local' ? 'Réduire' : 'Agrandir'} votre vidéo`}
             >
               <video autoPlay muted playsInline ref={localVideoRef} />
-              {(!cameraAvailable || !cameraEnabled) && <div className="live-video-placeholder"><i className="bi bi-person-video3" aria-hidden="true" /><span>{cameraAvailable ? 'Caméra désactivée' : 'Caméra indisponible — appuyez sur Caméra pour réessayer'}</span></div>}
+              {!sharingScreen && (!cameraAvailable || !cameraEnabled) && <div className="live-video-placeholder"><i className="bi bi-person-video3" aria-hidden="true" /><span>{cameraAvailable ? 'Caméra désactivée' : 'Caméra indisponible — appuyez sur Caméra pour réessayer'}</span></div>}
+              {sharingScreen && cameraAvailable && cameraEnabled && (
+                <video
+                  autoPlay
+                  className="live-camera-picture-in-picture"
+                  muted
+                  playsInline
+                  ref={(element) => {
+                    cameraPictureInPictureRef.current = element
+                    if (element && localStreamRef.current && element.srcObject !== localStreamRef.current) {
+                      element.srcObject = localStreamRef.current
+                      element.play().catch(() => {})
+                    }
+                  }}
+                />
+              )}
+              {sharingScreen && (
+                <button
+                  aria-label={presentationFullscreen ? 'Quitter le plein écran' : 'Afficher le partage en plein écran'}
+                  aria-pressed={presentationFullscreen}
+                  className="live-video-fullscreen"
+                  onClick={togglePresentationFullscreen}
+                  title={presentationFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+                  type="button"
+                >
+                  <i className={`bi ${presentationFullscreen ? 'bi-fullscreen-exit' : 'bi-fullscreen'}`} aria-hidden="true" />
+                  <span>{presentationFullscreen ? 'Quitter' : 'Plein écran'}</span>
+                </button>
+              )}
               <div className="live-video-label"><span>{joinInfo.display_name} · Vous</span><i className={`bi ${micEnabled ? 'bi-mic-fill' : 'bi-mic-mute-fill'}`} aria-label={micEnabled ? 'Micro activé' : 'Micro coupé'} /></div>
             </article>
             {remoteParticipants.map((person) => (
