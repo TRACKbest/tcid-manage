@@ -82,7 +82,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
   const [roomEnded, setRoomEnded] = useState(false)
   const [strokeColor, setStrokeColor] = useState('#00a99d')
   const [expandedVideo, setExpandedVideo] = useState(null)
-  const [presentationFullscreen, setPresentationFullscreen] = useState(false)
+  const [fullscreenVideoId, setFullscreenVideoId] = useState(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -113,7 +113,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setPresentationFullscreen(document.fullscreenElement === localVideoTileRef.current)
+      setFullscreenVideoId(document.fullscreenElement?.dataset.videoId || null)
     }
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
@@ -504,9 +504,9 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
     }
   }
 
-  const togglePresentationFullscreen = async (event) => {
+  const toggleVideoFullscreen = async (event) => {
     event.stopPropagation()
-    const tile = localVideoTileRef.current
+    const tile = event.currentTarget.closest('.live-video-tile')
     if (!tile) return
     try {
       if (document.fullscreenElement === tile) await document.exitFullscreen()
@@ -649,6 +649,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
           <div className="live-video-grid">
             <article
               className={`live-video-tile is-local ${sharingScreen ? 'is-sharing-screen' : ''} ${expandedVideo === 'local' ? 'is-expanded' : ''}`}
+              data-video-id="local"
               ref={localVideoTileRef}
               onClick={(event) => {
                 if (!event.target.closest('button')) toggleVideoSize('local')
@@ -677,15 +678,15 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
               )}
               {sharingScreen && (
                 <button
-                  aria-label={presentationFullscreen ? 'Quitter le plein écran' : 'Afficher le partage en plein écran'}
-                  aria-pressed={presentationFullscreen}
+                  aria-label={fullscreenVideoId === 'local' ? 'Quitter le plein écran' : 'Afficher le partage en plein écran'}
+                  aria-pressed={fullscreenVideoId === 'local'}
                   className="live-video-fullscreen"
-                  onClick={togglePresentationFullscreen}
-                  title={presentationFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+                  onClick={toggleVideoFullscreen}
+                  title={fullscreenVideoId === 'local' ? 'Quitter le plein écran' : 'Plein écran'}
                   type="button"
                 >
-                  <i className={`bi ${presentationFullscreen ? 'bi-fullscreen-exit' : 'bi-fullscreen'}`} aria-hidden="true" />
-                  <span>{presentationFullscreen ? 'Quitter' : 'Plein écran'}</span>
+                  <i className={`bi ${fullscreenVideoId === 'local' ? 'bi-fullscreen-exit' : 'bi-fullscreen'}`} aria-hidden="true" />
+                  <span>{fullscreenVideoId === 'local' ? 'Quitter' : 'Plein écran'}</span>
                 </button>
               )}
               <div className="live-video-label"><span>{joinInfo.display_name} · Vous</span><i className={`bi ${micEnabled ? 'bi-mic-fill' : 'bi-mic-mute-fill'}`} aria-label={micEnabled ? 'Micro activé' : 'Micro coupé'} /></div>
@@ -693,6 +694,7 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
             {remoteParticipants.map((person) => (
               <article
                 className={`live-video-tile ${expandedVideo === person.peer_id ? 'is-expanded' : ''}`}
+                data-video-id={person.peer_id}
                 key={person.peer_id}
                 onClick={(event) => {
                   if (!event.target.closest('button')) toggleVideoSize(person.peer_id)
@@ -720,6 +722,19 @@ const LiveRoom = ({ classroom, joinInfo, role, participantId, onLeave, onEnd }) 
                   <i className={`bi ${person.microphone_enabled === false ? 'bi-mic-mute-fill' : 'bi-mic-fill'}`} aria-label={person.microphone_enabled === false ? 'Micro coupé' : 'Micro ouvert'} />
                   <span className="live-video-role">{person.role === 'teacher' ? 'ENSEIGNANT' : 'ÉTUDIANT'}</span>
                 </div>
+                {canModerate && (
+                  <button
+                    aria-label={fullscreenVideoId === person.peer_id ? `Quitter le plein écran de ${person.display_name}` : `Afficher le partage de ${person.display_name} en plein écran`}
+                    aria-pressed={fullscreenVideoId === person.peer_id}
+                    className="live-video-fullscreen"
+                    onClick={toggleVideoFullscreen}
+                    title={fullscreenVideoId === person.peer_id ? 'Quitter le plein écran' : 'Plein écran'}
+                    type="button"
+                  >
+                    <i className={`bi ${fullscreenVideoId === person.peer_id ? 'bi-fullscreen-exit' : 'bi-fullscreen'}`} aria-hidden="true" />
+                    <span>{fullscreenVideoId === person.peer_id ? 'Quitter' : 'Plein écran'}</span>
+                  </button>
+                )}
                 {canModerate && (
                   <div className="live-video-moderation">
                     <button aria-label={`${person.microphone_enabled === false ? 'Activer' : 'Couper'} le micro de ${person.display_name}`} onClick={() => moderateParticipant(person.peer_id, 'microphone', person.microphone_enabled === false)} title={person.microphone_enabled === false ? 'Activer le micro' : 'Couper le micro'} type="button"><i className={`bi ${person.microphone_enabled === false ? 'bi-mic-fill' : 'bi-mic-mute'}`} /></button>
