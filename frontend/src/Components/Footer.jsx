@@ -30,10 +30,10 @@ const Footer = () => {
                         <a className="footer-email" href="mailto:tcid.centermadagascar@gmail.com">tcid.centermadagascar@gmail.com</a>
                     </p>
                     <div className="d-flex pt-2">
-                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://twitter.com/home?lang=en" aria-label="Twitter"><i className="fab fa-twitter" aria-hidden="true" /><span className="visually-hidden">Twitter</span></a>
-                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://www.facebook.com/" aria-label="Facebook"><i className="fab fa-facebook-f" aria-hidden="true" /><span className="visually-hidden">Facebook</span></a>
-                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://www.youtube.com/channel/UCWBZgfmIVxElVuTxsboMGNg" aria-label="YouTube"><i className="fab fa-youtube" aria-hidden="true" /><span className="visually-hidden">YouTube</span></a>
-                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://www.linkedin.com/feed/" aria-label="LinkedIn"><i className="fab fa-linkedin-in" aria-hidden="true" /><span className="visually-hidden">LinkedIn</span></a>
+                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://twitter.com/home?lang=fr" aria-label="Twitter"><i className="fab fa-twitter" aria-hidden="true" /><span className="visually-hidden">Twitter</span></a>
+                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://www.facebook.com/p/TCiD-Center-Madagascar-61583038349528/" aria-label="Facebook"><i className="fab fa-facebook-f" aria-hidden="true" /><span className="visually-hidden">Facebook</span></a>
+                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://www.youtube.com" aria-label="YouTube"><i className="fab fa-youtube" aria-hidden="true" /><span className="visually-hidden">YouTube</span></a>
+                        <a className="btn btn-outline-light btn-social" target="_blank" rel="noreferrer" href="https://www.linkedin.com" aria-label="LinkedIn"><i className="fab fa-linkedin-in" aria-hidden="true" /><span className="visually-hidden">LinkedIn</span></a>
                     </div>
                 </div>
             </div>
