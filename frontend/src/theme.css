@@ -9,6 +9,12 @@
   --lms-surface: #ffffff;
   --lms-line: #dce6df;
   --lms-shadow: 0 12px 32px rgba(23, 50, 50, 0.08);
+  --ui-indigo: #6366f1;
+  --ui-violet: #8b5cf6;
+  --ui-cyan: #06b6d4;
+  --ui-rose: #f43f5e;
+  --ui-ink: #0f172a;
+  --ui-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
   color-scheme: light;
 }
 
@@ -69,6 +75,15 @@ a:hover {
   font-size: 1.35rem;
 }
 
+.navbar-brand .nav-brand-text {
+  background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 55%, #0891b2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
 .navbar .nav-link {
   display: inline-flex;
   align-items: center;
@@ -83,9 +98,142 @@ a:hover {
 }
 
 .navbar .nav-link:hover,
-.navbar .nav-link:focus-visible {
-  color: var(--lms-green-dark) !important;
-  background: #e8f1eb;
+.navbar .nav-link:focus-visible,
+.navbar .nav-link[aria-expanded="true"] {
+  color: #4338ca !important;
+  background: #eef2ff;
+}
+
+/* Account toggles and the bell are <button>s: drop the browser's default button chrome */
+.navbar button.nav-link {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+}
+
+/* Notification bell: unread counter pinned to the icon's top-right corner */
+.navbar .nav-bell {
+  gap: 0.95rem;
+}
+
+.navbar .nav-bell-icon {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 1.15rem;
+}
+
+.navbar .nav-bell-badge {
+  position: absolute;
+  top: -0.45rem;
+  right: -0.65rem;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.3rem;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, #f43f5e, #ec4899);
+  box-shadow: 0 4px 10px -2px rgba(244, 63, 94, 0.6);
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
+  animation: nav-badge-pop 300ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.navbar .nav-bell .bi-bell-fill {
+  color: var(--ui-indigo);
+  transform-origin: top center;
+  animation: nav-bell-ring 2.4s ease-in-out 1;
+}
+
+.navbar-toggler .nav-toggler-dot {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--ui-rose);
+}
+
+.navbar .nav-unread-chip {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  color: #4338ca;
+  background: #eef2ff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.navbar .dropdown-item.nav-notif {
+  position: relative;
+  margin-bottom: 0.15rem;
+  border-radius: 0.65rem;
+}
+
+.navbar .dropdown-item.nav-notif.is-unread {
+  padding-left: 1.4rem;
+  background: #f5f7ff;
+}
+
+.navbar .dropdown-item.nav-notif.is-unread::before {
+  content: '';
+  position: absolute;
+  top: 1rem;
+  left: 0.6rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--ui-indigo);
+}
+
+@keyframes nav-badge-pop {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@keyframes nav-bell-ring {
+  0%, 60%, 100% { transform: rotate(0); }
+  10%, 30% { transform: rotate(14deg); }
+  20%, 40% { transform: rotate(-12deg); }
+}
+
+@media (min-width: 992px) {
+  .navbar .nav-bell + .dropdown-menu,
+  .navbar .navbar-nav > .dropdown:last-child > .dropdown-menu {
+    right: 0;
+    left: auto;
+  }
+}
+
+/* Components/style.css (template) styles nav links with !important; these selectors outrank it */
+.navbar.navbar-light .navbar-nav .nav-link:hover,
+.navbar.navbar-light .navbar-nav .nav-link:focus-visible,
+.navbar.navbar-light .navbar-nav .nav-link[aria-expanded="true"] {
+  color: #4338ca !important;
+}
+
+/* Keep every nav item on one line between the lg breakpoint and wide screens */
+@media (min-width: 992px) and (max-width: 1199.98px) {
+  .navbar.navbar-light .navbar-nav .nav-link {
+    margin-right: 0.35rem !important;
+    padding-right: 0.4rem !important;
+    padding-left: 0.4rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .navbar-brand h2 {
+    font-size: 1.15rem;
+  }
 }
 
 .navbar .dropdown-menu {
@@ -102,8 +250,8 @@ a:hover {
 
 .navbar .dropdown-item:hover,
 .navbar .dropdown-item:focus {
-  color: var(--lms-green-dark);
-  background: #edf4ef;
+  color: #4338ca;
+  background: #eef2ff;
 }
 
 .navbar .dropdown-item .text-muted {
@@ -412,7 +560,7 @@ textarea.form-control {
   border-radius: 0.65rem;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 991.98px) {
   .navbar .navbar-nav {
     align-items: stretch;
   }
@@ -426,7 +574,9 @@ textarea.form-control {
     width: 100%;
     transform: none !important;
   }
+}
 
+@media (max-width: 767.98px) {
   .card-header {
     padding: 0.85rem;
   }

@@ -1,333 +1,354 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
-import { useState } from 'react'
 import axios from 'axios'
 import Stars from './Stars'
-import "react-responsive-carousel/lib/styles/carousel.min.css";
-import { Carousel } from "react-responsive-carousel";
-import './Header.css'
-import wave from './darkside.mp4'
-import './main.css'
-import './search.css'
 import PriceTag from './PriceTag'
+import './Home.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
+const features = [
+  { icon: 'bi-mortarboard-fill', title: 'Formateurs qualifiés', text: 'Des experts passionnés qui partagent un savoir concret, à jour et directement applicable.' },
+  { icon: 'bi-camera-video-fill', title: 'Classes virtuelles', text: 'Rejoignez des sessions en direct, échangez avec votre formateur et participez aux sondages.' },
+  { icon: 'bi-lightning-charge-fill', title: 'Exercices pratiques', text: 'Quiz, devoirs et projets conçus par les formateurs pour ancrer chaque notion essentielle.' },
+  { icon: 'bi-journal-richtext', title: 'Ressources pédagogiques', text: 'Vidéos, documents et supports de cours accessibles à tout moment, sur tous vos appareils.' },
+]
+
+const benefits = [
+  'Formateurs qualifiés',
+  'Formations en ligne',
+  'Échanges avec les formateurs',
+  'Ressources pédagogiques',
+  'Exercices réguliers',
+  'Apprentissage autonome',
+]
+
+const cubeFaces = [
+  { side: 'front', icon: 'bi-code-slash' },
+  { side: 'back', icon: 'bi-globe2' },
+  { side: 'right', icon: 'bi-book-half' },
+  { side: 'left', icon: 'bi-cpu' },
+  { side: 'top', icon: 'bi-mortarboard' },
+  { side: 'bottom', icon: 'bi-lightbulb' },
+]
+
+// Follows the pointer to tilt a card in 3D; CSS only applies it on hover-capable devices.
+const tilt = (event) => {
+  const card = event.currentTarget
+  const rect = card.getBoundingClientRect()
+  const x = (event.clientX - rect.left) / rect.width - 0.5
+  const y = (event.clientY - rect.top) / rect.height - 0.5
+  card.style.setProperty('--rx', `${(-y * 10).toFixed(2)}deg`)
+  card.style.setProperty('--ry', `${(x * 12).toFixed(2)}deg`)
+}
+
+const resetTilt = (event) => {
+  event.currentTarget.style.setProperty('--rx', '0deg')
+  event.currentTarget.style.setProperty('--ry', '0deg')
+}
+
+const CourseCard = ({ course, showRating, delay }) => (
+  <div className="col-lg-4 col-md-6" data-reveal style={{ '--delay': `${delay}ms` }}>
+    <article className="hm-course hm-tilt" onMouseMove={tilt} onMouseLeave={resetTilt}>
+      <Link to={`/detail/${course.id}`} className="hm-course-media">
+        <img src={course.featured_img} alt={course.title} loading="lazy" />
+        <span className="hm-course-play" aria-hidden="true"><i className="bi bi-play-fill"></i></span>
+      </Link>
+      <div className="hm-course-body">
+        <PriceTag course={course} />
+        <h3 className="hm-course-title"><Link to={`/detail/${course.id}`}>{course.title}</Link></h3>
+        {showRating && <div className="hm-course-rating"><Stars stars={course.course_rating} /></div>}
+      </div>
+      <div className="hm-course-meta">
+        <span><i className="bi bi-person-video3" aria-hidden="true"></i>{course.teacher?.full_name}</span>
+        <span title="Apprenants inscrits"><i className="bi bi-people-fill" aria-hidden="true"></i><span>{course.total_enrolled_students}</span></span>
+      </div>
+    </article>
+  </div>
+)
+
+const SectionHead = ({ eyebrow, title, text }) => (
+  <div className="hm-head" data-reveal>
+    <span className="hm-eyebrow">{eyebrow}</span>
+    <h2>{title}</h2>
+    {text && <p>{text}</p>}
+  </div>
+)
+
 const Home = () => {
   const navigate = useNavigate()
+  const heroRef = useRef(null)
 
-  useEffect(()=>{
-    document.title='TCiD Center'
-  })
+  const [courseData, setCourseData] = useState([])
+  const [popularcourseData, setPopularcourseData] = useState([])
+  const [popularteacherData, setPopularteacherData] = useState([])
+  const [testData, setTestData] = useState([])
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
+    document.title = 'TCiD Center'
     window.scrollTo(0, 0)
   }, [])
 
-  const [courseData, setCourseData]=useState([]);
-  const [popularcourseData,setPopularcourseData]=useState([]);
-  const [popularteacherData,setPopularteacherData]=useState([]);
-  const [testData,setTestData]=useState([]);
+  useEffect(() => {
+    const load = (path, setter, pick) => axios.get(baseUrl + path)
+      .then((res) => setter(pick(res.data) || []))
+      .catch((error) => console.log(error))
 
-  useEffect(()=>{
-    try{
-        axios.get(baseUrl+'/course/?result=3')
-        .then((res)=>{
-            setCourseData(res.data.results)
-        });
-    }catch(error){
-        console.log(error)
+    load('/course/?result=3', setCourseData, (data) => data.results)
+    load('/popular-teachers/?popular=1', setPopularteacherData, (data) => data)
+    load('/popular-courses/?popular=1', setPopularcourseData, (data) => data.results)
+    load('/student-test/', setTestData, (data) => data.results)
+  }, [])
+
+  // Reveal sections as they scroll into view; content loaded later is picked up on each data change.
+  useEffect(() => {
+    const items = document.querySelectorAll('[data-reveal]:not(.is-visible)')
+    if (!('IntersectionObserver' in window)) {
+      items.forEach((item) => item.classList.add('is-visible'))
+      return undefined
     }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+          observer.unobserve(entry.target)
+        }
+      })
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' })
+    items.forEach((item) => observer.observe(item))
+    return () => observer.disconnect()
+  }, [courseData, popularcourseData, popularteacherData, testData])
 
-    try{
-      axios.get(baseUrl+'/popular-teachers/?popular=1')
-      .then((res)=>{
-        setPopularteacherData(res.data)
-      });
-  }catch(error){
-      console.log(error)
-  }
-
-  try{
-    axios.get(baseUrl+'/popular-courses/?popular=1')
-    .then((res)=>{
-      setPopularcourseData(res.data.results)
-    });
-}catch(error){
-    console.log(error)
-}
-
-try{
-  axios.get(baseUrl+'/student-test/')
-  .then((res)=>{
-    setTestData(res.data.results)
-  });
-}catch(error){
-  console.log(error)
-}
-    
-  },[]);
-
-  const [searchString,setSearchString]=useState({
-    'search':'',
-  })
-
-  const handleChange=(event)=>{
-    setSearchString({
-      ...searchString,
-      [event.target.name]:event.target.value
-    });
+  const handleHeroMove = (event) => {
+    const hero = heroRef.current
+    if (!hero) return
+    const rect = hero.getBoundingClientRect()
+    hero.style.setProperty('--mx', ((event.clientX - rect.left) / rect.width - 0.5).toFixed(3))
+    hero.style.setProperty('--my', ((event.clientY - rect.top) / rect.height - 0.5).toFixed(3))
   }
 
   const handleSearchSubmit = (event) => {
     event.preventDefault()
-    const query = searchString.search.trim()
+    const query = search.trim()
     if (query) navigate(`/search/${encodeURIComponent(query)}`)
   }
-  
-  return (
-    <>
-      {/* Start Background video player*/}
-    <section className="showcase">
-    <video src={wave} autoPlay muted loop />
-    <div className="overlay"></div>
-    <div className="text">
-      <h1 className='head'>Apprenez sans cesse.<br/>Progressez chaque jour.</h1>
-      <h1 className='headss'>Apprenez avec nous !</h1>
-      <p className='para'>Apprenez auprès des meilleurs formateurs. Maîtrisez les dernières tendances technologiques.</p>
-    </div>
-    </section>
-      {/*  End Background video player*/}
-      {/*  Start Features of meetLearning*/}
-    <div className="container-xxl py-5 space">
-        <div className="container">
-            <div className="row g-4">
-                <div className="col-lg-3 col-sm-6 wow fadeInUp" data-wow-delay="0.1s">
-                    <div className="service-item text-center pt-3">
-                        <div className="p-4">
-                            <i className="fa fa-3x fa-graduation-cap text-primary mb-4"></i>
-                            <h5 className="mb-3">Formateurs qualifiés</h5>
-                            <p>Un proverbe dit : <br/>« Si vous prévoyez pour un an, semez du riz ; pour dix ans, plantez des arbres ; pour toute une vie, instruisez les personnes. »</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-lg-3 col-sm-6 wow fadeInUp" data-wow-delay="0.3s">
-                    <div className="service-item text-center pt-3">
-                        <div className="p-4">
-                            <i className="fa fa-3x fa-globe text-primary mb-4"></i>
-                            <h5 className="mb-3">Formations en ligne</h5>
-                            <p>Pour apprendre efficacement, il faut rester engagé : lire, écouter, écrire, observer des démonstrations et mettre ses connaissances en pratique.</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-lg-3 col-sm-6 wow fadeInUp" data-wow-delay="0.5s">
-                    <div className="service-item text-center pt-3">
-                        <div className="p-4">
-                            <i className="fa fa-3x fa-home text-primary mb-4"></i>
-                            <h5 className="mb-3">Des exercices pratiques</h5>
-                            <p>Préparez votre avenir grâce à des exercices de qualité, conçus par les formateurs et couvrant les notions essentielles de chaque formation.</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="col-lg-3 col-sm-6 wow fadeInUp" data-wow-delay="0.7s">
-                    <div className="service-item text-center pt-3">
-                        <div className="p-4">
-                            <i className="fa fa-3x fa-book-open text-primary mb-4"></i>
-                            <h5 className="mb-3">Des ressources pédagogiques</h5>
-                            <p>Appuyez-vous sur des ressources de qualité et les conseils de vos formateurs pour atteindre vos objectifs et préparer vos examens.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-      {/*  End Features of meetLearning*/}
-      {/*  About Us card */}
-    <div className="container-xxl py-5">
-        <div className="container">
-            <div className="row g-5">
-                <div className="col-lg-6 wow fadeInUp" data-wow-delay="0.1s" >
-                    <div className="d-flex align-items-center h-100">
-                        <img
-                            className="img-fluid rounded-3 w-100"
-                            src="/Etudiant.png"
-                            alt="Étudiant du TCiD Center"
-                            style={{ aspectRatio: '4 / 3', objectFit: 'cover' }}
-                        />
-                    </div>
-                </div>
-                <div className="col-lg-6 wow fadeInUp" data-wow-delay="0.3s">
-                    <h6 className="section-title bg-white text-start text-primary pe-3">À propos de nous</h6>
-                    <h1 className="mb-4">Bienvenue à TCiD Center</h1>
-                    <p className="mb-4">Les apprenants apprennent mieux lorsqu’ils échangent, réfléchissent à ce qu’ils découvrent, font le lien avec leurs expériences et mettent leurs connaissances en pratique. L’apprentissage prend tout son sens lorsqu’il s’intègre à leur quotidien.</p>
-                    <p className="mb-4">Au TCiD Center, nous créons des formations en ligne stimulantes qui donnent envie d’apprendre, de développer de nouvelles compétences et de progresser.</p>
-                    <div className="row gy-2 gx-4 mb-4"> 
-                        <div className="col-sm-6">
-                            <p className="mb-0"><i className="fa fa-arrow-right text-primary me-2"></i>Formateurs qualifiés</p>
-                        </div>
-                        <div className="col-sm-6">
-                            <p className="mb-0"><i className="fa fa-arrow-right text-primary me-2"></i>Formations en ligne</p>
-                        </div>
-                        <div className="col-sm-6">
-                            <p className="mb-0"><i className="fa fa-arrow-right text-primary me-2"></i>Échanger avec les formateurs</p>
-                        </div>
-                        <div className="col-sm-6">
-                            <p className="mb-0"><i className="fa fa-arrow-right text-primary me-2"></i>Ressources pédagogiques</p>
-                        </div>
-                        <div className="col-sm-6">
-                            <p className="mb-0"><i className="fa fa-arrow-right text-primary me-2"></i>Exercices réguliers</p>
-                        </div>
-                        <div className="col-sm-6">
-                            <p className="mb-0"><i className="fa fa-arrow-right text-primary me-2"></i>Apprentissage autonome</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-      {/*  About Us card */}
-        <form className="input-box container" onSubmit={handleSearchSubmit}>
-          <i className="bi bi-search text-info"></i>
-          <input name='search' type="search" onChange={handleChange} placeholder="Rechercher…" aria-label="Rechercher" value={searchString.search} />
-          <button className='button' type="submit">Rechercher</button>
-        </form>
 
-    <div className='container mt-4'>
-      {/* Start Latest Courses*/}
-    <div className="container-xxl py-5">
-        <div className="container">
-            <div className="text-center wow fadeInUp">
-                <h6 className="section-title bg-white text-center text-primary px-3">Formations</h6>
-                <h1 className="mb-5">Dernières formations</h1>
-            </div>
-            <div className="row g-4 justify-content-center">
-            {courseData && courseData.map((course,index) =>
-                <div className="col-lg-4 col-md-6 wow fadeInUp" key={course.id}>
-                    <div className="course-item bg-light">
-                        <div className="position-relative overflow-hidden">
-                        <Link to={`/detail/${course.id}`}><img src={course.featured_img} height={250}  className="card-img-top" alt={course.title} /></Link>                        </div>
-                        <div className="text-center p-4 pb-0">
-                            <h5 className="mb-2"><Link to={`/detail/${course.id}`}>{course.title}</Link></h5>
-                            <div className="mb-3"><PriceTag course={course} /></div>
-                        </div>
-                        <div className="d-flex border-top">
-                            <small className="flex-fill text-center border-end py-2"><i className="fa fa-user-tie text-primary me-2"></i>{course.teacher.full_name}</small>                            <small className="flex-fill text-center py-2"><i className="fa fa-user text-primary me-2"></i>{course.total_enrolled_students}</small>
-                        </div>
-                    </div>
-                </div>
-                )}
-            </div>
+  return (
+    <div className="hm">
+      {/* Hero */}
+      <section className="hm-hero" ref={heroRef} onMouseMove={handleHeroMove}>
+        <div className="hm-hero-bg" aria-hidden="true">
+          <span className="hm-blob hm-blob-1"></span>
+          <span className="hm-blob hm-blob-2"></span>
+          <span className="hm-blob hm-blob-3"></span>
+          <span className="hm-grid"></span>
         </div>
-    </div>
-    <div className="text-center">
-    <button type="button" className="btn btn-primary border border-primary"><Link to='/all-courses'className='text-white' >Voir toutes les formations</Link></button>
-    </div>
-      {/* ENd Latest Courses*/}
-      {/* popular Courses*/}
-    <div className="container-xxl py-5">
-        <div className="container">
-            <div className="text-center wow fadeInUp">
-                <h6 className="section-title bg-white text-center text-primary px-3">Formations</h6>
-                <h1 className="mb-5">Formations populaires</h1>
+
+        <div className="container hm-hero-inner">
+          <div className="hm-hero-copy">
+            <span className="hm-pill"><span className="hm-pill-dot"></span>Plateforme e-learning · Madagascar</span>
+            <h1 className="hm-title">
+              Apprenez sans cesse.<br />
+              <span className="hm-gradient-text">Progressez chaque jour.</span>
+            </h1>
+            <p className="hm-lead">Apprenez auprès des meilleurs formateurs, suivez des classes virtuelles en direct et maîtrisez les dernières tendances technologiques.</p>
+
+            <form className="hm-search" onSubmit={handleSearchSubmit} role="search">
+              <i className="bi bi-search" aria-hidden="true"></i>
+              <input name="search" type="search" onChange={(event) => setSearch(event.target.value)} placeholder="Que voulez-vous apprendre ?" aria-label="Rechercher" value={search} />
+              <button type="submit">Rechercher</button>
+            </form>
+
+            <div className="hm-hero-actions">
+              <Link to="/all-courses" className="hm-btn hm-btn-primary">Explorer les formations<i className="bi bi-arrow-right" aria-hidden="true"></i></Link>
+              <Link to="/teacher-register" className="hm-btn hm-btn-ghost"><i className="bi bi-person-badge" aria-hidden="true"></i>Devenir formateur</Link>
             </div>
-            <div className="row g-4 justify-content-center">
-            {popularcourseData && popularcourseData.map((row,index)=>
-                <div className="col-lg-4 col-md-6 wow fadeInUp" key={row.id}>
-                    <div className="course-item bg-light">
-                        <div className="position-relative overflow-hidden">
-                    <Link to={`/detail/${row.id}`}><img src={row.featured_img} height={250}  className="card-img-top" alt={row.title}/></Link>
-                        </div>
-                        <div className="text-center p-4 pb-0">
-                    <h5 className="mb-2"><Link to={`/detail/${row.id}`}>{row.title}</Link></h5>
-                    <div className="mb-3"><PriceTag course={row} /></div>
-                        </div>
-                        <div className="d-flex border-top">
-                    <small className="flex-fill text-center border-end py-2"><i className="fa fa-user-tie text-primary me-2"></i>{row.teacher.full_name}</small>
-                    <small className="flex-fill text-center border-end py-2"><Stars stars={row.course_rating}/></small>
-                    <small className="flex-fill text-center py-2"><i className="fa fa-user text-primary me-2"></i>{row.total_enrolled_students}</small>
-                        </div>
-                    </div>
-                </div>
-                )}
-            </div>
-        </div>
-    </div>
-    <div className="text-center">
-    <button type="button" className="btn btn-primary border border-primary"><Link to='/popular-courses' className='text-white'>Voir les formations populaires</Link></button>
-    </div>
-      {/* ENd Popular Courses*/}
-      {/* Popular Teacher */}
-    <div className="container-xxl py-5">
-        <div className="container">
-            <div className="text-center wow fadeInUp">
-                <h6 className="section-title bg-white text-center text-primary px-3">Formateurs</h6>
-                <h1 className="mb-5">Formateurs populaires</h1>
-            </div>
-            <div className="row g-4">
-            {popularteacherData && popularteacherData.map((teacher,index)=>
-                <div className="col-lg-3 col-md-6 wow fadeInUp" data-wow-delay="0.1s">
-                    <div className="team-item bg-light">
-                        <div className="overflow-hidden">
-                          <Link className='front' to={`/teacher-detail/${teacher.id}`}><img src={teacher.profile_img} height={330} className="card-img-top" alt={teacher.full_name}/></Link>
-                        </div>
-                        <div className="position-relative d-flex justify-content-center">
-                            <div className="bg-light d-flex justify-content-center pt-2 px-1 mt-1">
-                            {teacher.insta_url &&
-                              <a className="btn btn-sm-square btn-primary mx-1" href={teacher.insta_url}><i className="fab fa-instagram"></i></a>
-                            }
-                            {teacher.twit_url &&
-                              <a className="btn btn-sm-square btn-primary mx-1" href={teacher.twit_url}><i className="fab fa-twitter"></i></a>
-                            }
-                            {teacher.face_url &&
-                              <a className="btn btn-sm-square btn-primary mx-1" href={teacher.face_url}><i className="fab fa-facebook"></i></a>
-                            }
-                        </div>
-                        </div>
-                        <div className="text-center p-4">
-                        <h4 className="card-title mb-0 "><Link to={`/teacher-detail/${teacher.id}`}>{teacher.full_name}</Link></h4>                            
-                        <p className='mb-0'>{teacher.qualification}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-            </div>
-        </div>
-    </div>
-      {/* ENd Popular Teacher Courses*/}
-      {/* Student Testimonial */}
-    <div className="text-center wow fadeInUp">
-                <h6 className="section-title bg-white text-center text-primary px-3">Leurs avis</h6>
-                <h1 className="mb-5">Témoignages d’apprenants</h1>
-        </div>
-    <div>
-      <Carousel
-        showArrows={true}
-        infiniteLoop={true}
-        showThumbs={false}
-        showStatus={false}
-        autoPlay={true}
-        interval={5500}
-        showIndicators={false}
-      >
-      {testData && testData.map((row,i)=>
-        <div>
-            <img src={row.student.profile_img} alt={row.student.fullname} />
-          <>
-          <div className="myCarousel">
-            <names>{row.course.fullname}</names>
-            <titles>{row.course.title}</titles>
-            <p>{row.reviews}</p>
-            <span>--{row.student.fullname}</span>
+
+            <ul className="hm-hero-points">
+              <li><i className="bi bi-check2-circle" aria-hidden="true"></i>Cours vidéo</li>
+              <li><i className="bi bi-check2-circle" aria-hidden="true"></i>Classes en direct</li>
+              <li><i className="bi bi-check2-circle" aria-hidden="true"></i>Quiz & devoirs</li>
+            </ul>
           </div>
-          </>
+
+          <div className="hm-scene" aria-hidden="true">
+            <div className="hm-scene-rig">
+              <div className="hm-orbit hm-orbit-1"><span></span></div>
+              <div className="hm-orbit hm-orbit-2"><span></span></div>
+              <div className="hm-cube-wrap">
+                <div className="hm-cube">
+                  {cubeFaces.map((face) => (
+                    <div key={face.side} className={`hm-face hm-face-${face.side}`}><i className={`bi ${face.icon}`}></i></div>
+                  ))}
+                </div>
+              </div>
+              <div className="hm-float hm-float-1">
+                <span className="hm-float-icon is-violet"><i className="bi bi-play-circle-fill"></i></span>
+                <div><strong>Cours vidéo</strong><small>Chapitre 3 · 12 min</small></div>
+              </div>
+              <div className="hm-float hm-float-2">
+                <span className="hm-float-icon is-cyan"><i className="bi bi-broadcast"></i></span>
+                <div><strong>En direct</strong><small>Classe virtuelle</small></div>
+              </div>
+              <div className="hm-float hm-float-3">
+                <span className="hm-float-icon is-pink"><i className="bi bi-trophy-fill"></i></span>
+                <div><strong>Quiz réussi</strong><small className="hm-progress"><span></span></small></div>
+              </div>
+            </div>
+          </div>
         </div>
-        )}
-      </Carousel>
+
+        <div className="hm-hero-wave" aria-hidden="true"></div>
+      </section>
+
+      {/* Features */}
+      <section className="hm-section hm-features">
+        <div className="container">
+          <div className="row g-4">
+            {features.map((feature, index) => (
+              <div className="col-lg-3 col-sm-6" key={feature.title} data-reveal style={{ '--delay': `${index * 90}ms` }}>
+                <div className="hm-feature hm-tilt" onMouseMove={tilt} onMouseLeave={resetTilt}>
+                  <span className="hm-feature-icon"><i className={`bi ${feature.icon}`} aria-hidden="true"></i></span>
+                  <h3>{feature.title}</h3>
+                  <p>{feature.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About */}
+      <section className="hm-section">
+        <div className="container">
+          <div className="row g-5 align-items-center">
+            <div className="col-lg-6" data-reveal>
+              <div className="hm-about-visual">
+                <div className="hm-about-frame">
+                  <img src="/Etudiant.png" alt="Étudiant du TCiD Center" loading="lazy" />
+                </div>
+                <div className="hm-about-badge">
+                  <i className="bi bi-patch-check-fill" aria-hidden="true"></i>
+                  <div><strong>Apprentissage</strong><small>actif et guidé</small></div>
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-6" data-reveal style={{ '--delay': '120ms' }}>
+              <span className="hm-eyebrow">À propos de nous</span>
+              <h2 className="hm-about-title">Bienvenue à <span className="hm-gradient-text">TCiD Center</span></h2>
+              <p className="hm-text">Les apprenants apprennent mieux lorsqu’ils échangent, réfléchissent à ce qu’ils découvrent, font le lien avec leurs expériences et mettent leurs connaissances en pratique.</p>
+              <p className="hm-text">Au TCiD Center, nous créons des formations en ligne stimulantes qui donnent envie d’apprendre, de développer de nouvelles compétences et de progresser.</p>
+              <ul className="hm-checklist">
+                {benefits.map((benefit) => (
+                  <li key={benefit}><i className="bi bi-check-lg" aria-hidden="true"></i>{benefit}</li>
+                ))}
+              </ul>
+              <Link to="/aboutus" className="hm-btn hm-btn-dark">En savoir plus<i className="bi bi-arrow-right" aria-hidden="true"></i></Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Latest courses */}
+      <section className="hm-section hm-section-tinted">
+        <div className="container">
+          <SectionHead eyebrow="Formations" title="Dernières formations" text="Les nouveautés publiées par nos formateurs." />
+          <div className="row g-4 justify-content-center">
+            {courseData.map((course, index) => <CourseCard key={course.id} course={course} delay={index * 90} />)}
+          </div>
+          <div className="hm-more" data-reveal>
+            <Link to="/all-courses" className="hm-btn hm-btn-primary">Voir toutes les formations<i className="bi bi-arrow-right" aria-hidden="true"></i></Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Popular courses */}
+      <section className="hm-section">
+        <div className="container">
+          <SectionHead eyebrow="Tendances" title="Formations populaires" text="Les formations les plus suivies et les mieux notées." />
+          <div className="row g-4 justify-content-center">
+            {popularcourseData.map((course, index) => <CourseCard key={course.id} course={course} showRating delay={index * 90} />)}
+          </div>
+          <div className="hm-more" data-reveal>
+            <Link to="/popular-courses" className="hm-btn hm-btn-primary">Voir les formations populaires<i className="bi bi-arrow-right" aria-hidden="true"></i></Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Popular teachers */}
+      {popularteacherData.length > 0 && (
+        <section className="hm-section hm-section-tinted">
+          <div className="container">
+            <SectionHead eyebrow="Formateurs" title="Formateurs populaires" text="Apprenez avec des formateurs reconnus par les apprenants." />
+            <div className="row g-4 justify-content-center">
+              {popularteacherData.map((teacher, index) => (
+                <div className="col-xl-3 col-lg-4 col-sm-6" key={teacher.id} data-reveal style={{ '--delay': `${index * 90}ms` }}>
+                  <article className="hm-teacher hm-tilt" onMouseMove={tilt} onMouseLeave={resetTilt}>
+                    <Link to={`/teacher-detail/${teacher.id}`} className="hm-teacher-avatar">
+                      {teacher.profile_img
+                        ? <img src={teacher.profile_img} alt={teacher.full_name} loading="lazy" />
+                        : <span className="hm-avatar-fallback" aria-label={teacher.full_name}>{(teacher.full_name || '?').charAt(0)}</span>}
+                    </Link>
+                    <h3><Link to={`/teacher-detail/${teacher.id}`}>{teacher.full_name}</Link></h3>
+                    <p>{teacher.qualification}</p>
+                    <div className="hm-teacher-social">
+                      {teacher.insta_url && <a href={teacher.insta_url} target="_blank" rel="noreferrer"><i className="bi bi-instagram" aria-hidden="true"></i><span className="visually-hidden">Instagram</span></a>}
+                      {teacher.twit_url && <a href={teacher.twit_url} target="_blank" rel="noreferrer"><i className="bi bi-twitter-x" aria-hidden="true"></i><span className="visually-hidden">Twitter</span></a>}
+                      {teacher.face_url && <a href={teacher.face_url} target="_blank" rel="noreferrer"><i className="bi bi-facebook" aria-hidden="true"></i><span className="visually-hidden">Facebook</span></a>}
+                    </div>
+                  </article>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Testimonials */}
+      {testData.length > 0 && (
+        <section className="hm-section">
+          <div className="container">
+            <SectionHead eyebrow="Leurs avis" title="Témoignages d’apprenants" />
+            <div className="hm-testimonials" data-reveal>
+              {testData.map((row, index) => (
+                <figure className="hm-quote" key={row.id || index}>
+                  <i className="bi bi-quote hm-quote-mark" aria-hidden="true"></i>
+                  <blockquote>{row.reviews}</blockquote>
+                  {row.rating !== undefined && <Stars stars={row.rating} />}
+                  <figcaption>
+                    {row.student?.profile_img
+                      ? <img src={row.student.profile_img} alt="" loading="lazy" />
+                      : <span className="hm-avatar-fallback" aria-hidden="true">{(row.student?.fullname || '?').charAt(0)}</span>}
+                    <div>
+                      <strong>{row.student?.fullname}</strong>
+                      <small>{row.course?.title}</small>
+                    </div>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Call to action */}
+      <section className="hm-section hm-cta-wrap">
+        <div className="container">
+          <div className="hm-cta" data-reveal>
+            <div className="hm-cta-glow" aria-hidden="true"></div>
+            <div>
+              <h2>Prêt à passer au niveau supérieur ?</h2>
+              <p>Créez votre compte gratuitement et commencez à apprendre dès aujourd’hui.</p>
+            </div>
+            <div className="hm-cta-actions">
+              <Link to="/user-register" className="hm-btn hm-btn-light">Commencer maintenant<i className="bi bi-arrow-right" aria-hidden="true"></i></Link>
+              <Link to="/category" className="hm-btn hm-btn-outline-light">Voir les catégories</Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-      {/* ENd Student Testimonial*/}
-    </div>
-    </>
   )
 }
 

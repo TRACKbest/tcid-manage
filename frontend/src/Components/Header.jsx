@@ -32,6 +32,7 @@ const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false)
   const [openAccountMenu, setOpenAccountMenu] = useState('')
   const unreadCount = notifications.filter(notification => !notification.is_read).length
+  const unreadLabel = unreadCount > 99 ? '99+' : unreadCount
 
   const closeMenu = () => {
     setMenuOpen(false)
@@ -105,7 +106,7 @@ const Header = () => {
   return (
     <>
     <nav className="navbar navbar-expand-lg bg-white navbar-light shadow sticky-top p-0">
-        <Link to="/" className="navbar-brand d-flex align-items-center px-4 px-lg-5">
+        <Link to="/" className="navbar-brand d-flex align-items-center px-3 px-sm-4 px-xl-5">
           <img
             src="/tcid-center-logo.png"
             alt=""
@@ -113,32 +114,36 @@ const Header = () => {
             className="me-2"
             style={{ width: 48, height: 48, objectFit: 'contain' }}
           />
-          <h2 className="m-0">TCiD Center</h2>
+          <h2 className="m-0 nav-brand-text">TCiD Center</h2>
         </Link>
         <button
           type="button"
-          className="navbar-toggler me-4"
+          className="navbar-toggler position-relative me-3 me-sm-4"
           aria-label={menuOpen ? 'Fermer le menu de navigation' : 'Ouvrir le menu de navigation'}
           aria-expanded={menuOpen}
           aria-controls="navbarCollapse"
           onClick={() => setMenuOpen(open => !open)}
         >
             <span className="navbar-toggler-icon"></span>
+            {unreadCount > 0 && !menuOpen && <span className="nav-toggler-dot" aria-hidden="true"></span>}
         </button>
         <div className={`collapse navbar-collapse${menuOpen ? ' show' : ''}`} id="navbarCollapse">
-            <div className="navbar-nav ms-auto p-4 p-lg-0">
+            <div className="navbar-nav ms-auto p-3 p-lg-0 pe-lg-4">
                 <Link to="/" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-house-door" aria-hidden="true"></i>Accueil</Link>
                 <Link to="/category" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-grid" aria-hidden="true"></i>Catégories</Link>
                 <Link to="/all-courses" onClick={closeMenu} className="nav-item nav-link"><i className="bi bi-book" aria-hidden="true"></i>Formations</Link>
                 {recipientType && recipientId && <div className="nav-item dropdown">
-                  <button type="button" className="nav-link btn border-0 d-flex align-items-center gap-2" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} non lues` : 'Notifications'} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}>
-                    <i className="bi bi-bell" aria-hidden="true"></i>
-                    {unreadCount > 0 && <span className="badge rounded-pill bg-danger">{unreadCount}</span>}
+                  <button type="button" className="nav-link btn border-0 nav-bell" aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} non lues` : 'Notifications'} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}>
+                    <span className="nav-bell-icon">
+                      <i className={`bi ${unreadCount > 0 ? 'bi-bell-fill' : 'bi-bell'}`} aria-hidden="true"></i>
+                      {unreadCount > 0 && <span className="nav-bell-badge" aria-hidden="true">{unreadLabel}</span>}
+                    </span>
+                    <span className="d-lg-none">Notifications</span>
                   </button>
                   {notificationsOpen && <div className="dropdown-menu dropdown-menu-end show p-2" style={{ minWidth: '280px', maxWidth: 'min(90vw, 420px)', maxHeight: '70vh', overflowY: 'auto', zIndex: 1080 }}>
-                    <h6 className="dropdown-header">Notifications</h6>
+                    <h6 className="dropdown-header d-flex justify-content-between align-items-center">Notifications{unreadCount > 0 && <span className="nav-unread-chip">{unreadCount} non lue{unreadCount > 1 ? 's' : ''}</span>}</h6>
                     {notifications.length === 0 && <span className="dropdown-item-text text-muted">Aucune notification</span>}
-                    {notifications.map(notification => <button type="button" key={notification.id} className={`dropdown-item text-wrap ${notification.is_read ? '' : 'fw-bold'}`} onClick={() => openNotification(notification)}>
+                    {notifications.map(notification => <button type="button" key={notification.id} className={`dropdown-item text-wrap nav-notif ${notification.is_read ? '' : 'is-unread fw-bold'}`} onClick={() => openNotification(notification)}>
                       <span className="d-block">{notification.subject}</span>
                       <small className="d-block text-muted">{notification.message}</small>
                       <small className="text-muted">{new Date(notification.created_at).toLocaleString()}</small>
@@ -163,7 +168,7 @@ const Header = () => {
                     </div>
                 </div>
                 <div className="nav-item dropdown">
-                    <button type="button" className="nav-link dropdown-toggle ps-0 px-5" aria-expanded={openAccountMenu === 'student'} onClick={() => setOpenAccountMenu(openAccountMenu === 'student' ? '' : 'student')}><i className="bi bi-mortarboard" aria-hidden="true"></i>Apprenant</button>
+                    <button type="button" className="nav-link dropdown-toggle" aria-expanded={openAccountMenu === 'student'} onClick={() => setOpenAccountMenu(openAccountMenu === 'student' ? '' : 'student')}><i className="bi bi-mortarboard" aria-hidden="true"></i>Apprenant</button>
                     <div className={`dropdown-menu fade-down m-0${openAccountMenu === 'student' ? ' show' : ''}`}>
                     {studentLoginStatus !== 'true' && 
                     <>
