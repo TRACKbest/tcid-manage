@@ -26,6 +26,8 @@ urlpatterns = [
     path('api/admin-ui/logout/', admin_api.admin_logout),
     path('api/admin-ui/approvals/<str:account_type>/<int:account_id>/', admin_api.admin_approve_account),
     path('api/admin-ui/resources/', admin_api.admin_resources),
+    path('api/admin-ui/payments/', admin_api.admin_payments),
+    path('api/admin-ui/payments/<int:payment_id>/<str:action>/', admin_api.admin_payment_action),
     path('api/admin-ui/groups/<int:group_id>/members/', admin_api.admin_group_members),
     path('api/admin-ui/resources/<str:app_label>/<str:model_name>/', admin_api.admin_resource_list),
     path('api/admin-ui/resources/<str:app_label>/<str:model_name>/<str:object_id>/', admin_api.admin_resource_detail),

@@ -34,7 +34,7 @@ const RecomemdedCourses = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-megaphone"> </i>  Formations recommandées pour vous</h5>
+                    <h5 className='card-header'><i className="bi bi-megaphone"> </i>  Formations recommandées pour vous</h5>
                     <div className='card-body table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>

@@ -63,9 +63,24 @@ class Course(models.Model):
     featured_img=models.ImageField(upload_to='course_imgs/',null=True)
     techs=models.TextField(null=True)
     course_views=models.BigIntegerField(default=0)
+    price=models.PositiveIntegerField(default=0,help_text='Prix en ariary (0 = formation gratuite).')
 
     class Meta:
         verbose_name_plural="3. Formations"
+
+    @property
+    def is_paid(self):
+        return self.price > 0
+
+    def ordered_chapters(self):
+        return self.course_chapters.order_by('position', 'id')
+
+    def first_chapter_id(self):
+        first = self.ordered_chapters().values_list('id', flat=True).first()
+        return first
+
+    def total_chapters(self):
+        return self.course_chapters.count()
 
     def related_videos(self):
         if not self.techs or not self.techs.strip():
@@ -93,10 +108,84 @@ class Chapter(models.Model):
     title=models.CharField(max_length=150,null=True)
     description=models.TextField()
     video=models.FileField(upload_to='chapter_videos/',null=True)
-    remarks=models.TextField(null=True)
+    remarks=models.TextField(null=True,blank=True)
+    position=models.PositiveIntegerField(default=0)
+    is_free_preview=models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural="4. Chapters"
+        ordering=['position', 'id']
+
+    def __str__(self):
+        return self.title or f'Chapitre {self.pk}'
+
+
+class ChapterDocument(models.Model):
+    chapter=models.ForeignKey(Chapter,on_delete=models.CASCADE,related_name='documents')
+    title=models.CharField(max_length=150)
+    description=models.TextField(blank=True,default='')
+    upload=models.FileField(upload_to='chapter_documents/')
+    position=models.PositiveIntegerField(default=0)
+    extracted_text=models.TextField(blank=True,default='')
+    created_at=models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural="4b. Documents des chapitres"
+        ordering=['position', 'id']
+
+    def __str__(self):
+        return self.title
+
+
+class CoursePayment(models.Model):
+    METHOD_ORANGE = 'orange_money'
+    METHOD_AIRTEL = 'airtel_money'
+    METHOD_MVOLA = 'mvola'
+    METHOD_CHOICES = [
+        (METHOD_ORANGE, 'Orange Money'),
+        (METHOD_AIRTEL, 'Airtel Money'),
+        (METHOD_MVOLA, 'MVola'),
+    ]
+    STATUS_PENDING = 'pending'
+    STATUS_VALIDATED = 'validated'
+    STATUS_REJECTED = 'rejected'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_VALIDATED, 'Validated'),
+        (STATUS_REJECTED, 'Rejected'),
+    ]
+
+    course=models.ForeignKey(Course,on_delete=models.CASCADE,related_name='payments')
+    student=models.ForeignKey('Student',on_delete=models.CASCADE,related_name='payments')
+    method=models.CharField(max_length=16,choices=METHOD_CHOICES)
+    amount=models.PositiveIntegerField()
+    expected_amount=models.PositiveIntegerField(default=0)
+    reference=models.CharField(max_length=64)
+    payer_phone=models.CharField(max_length=20,blank=True,default='')
+    status=models.CharField(max_length=10,choices=STATUS_CHOICES,default=STATUS_PENDING)
+    admin_note=models.CharField(max_length=300,blank=True,default='')
+    amount_received=models.PositiveIntegerField(null=True,blank=True)
+    reviewed_by=models.ForeignKey('auth.User',on_delete=models.SET_NULL,null=True,blank=True,related_name='reviewed_payments')
+    reviewed_at=models.DateTimeField(null=True,blank=True)
+    created_at=models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural="6b. Paiements des formations"
+        ordering=['-created_at']
+        constraints=[
+            models.UniqueConstraint(
+                fields=['method', 'reference'],
+                condition=~models.Q(status='rejected'),
+                name='unique_active_payment_reference',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.reference} · {self.student} · {self.course}'
+
+    @staticmethod
+    def normalize_reference(value):
+        return ''.join(str(value or '').split()).upper()
 
 
 class Student(models.Model):

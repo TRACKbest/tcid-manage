@@ -35,8 +35,8 @@ const EnrolledStudents = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-people-fill"></i> Liste des apprenants inscrits</h5>
-                    <div className='card-body' class="table-responsive">
+                    <h5 className='card-header'><i className="bi bi-people-fill"></i> Liste des apprenants inscrits</h5>
+                    <div className='card-body table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>
                                 <tr>

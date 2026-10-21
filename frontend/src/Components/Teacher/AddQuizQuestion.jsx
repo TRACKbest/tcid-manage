@@ -78,27 +78,27 @@ const AddQuizQuestion = () => {
                 <h3 className='card-header'>Ajouter une question</h3>
                 <div className='card-body'>
                      <div className="mb-3">
-                        <label for="title" className="form-label">Question</label>
+                        <label htmlFor="title" className="form-label">Question</label>
                         <input type="text" onChange={handleChange} name='questions' className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="title" className="form-label">Choix 1</label>
+                        <label htmlFor="title" className="form-label">Choix 1</label>
                         <input type="text" onChange={handleChange} name='ans1' className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="title" className="form-label">Choix 2</label>
+                        <label htmlFor="title" className="form-label">Choix 2</label>
                         <input type="text" onChange={handleChange} name='ans2' className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="title" className="form-label">Choix 3</label>
+                        <label htmlFor="title" className="form-label">Choix 3</label>
                         <input type="text" onChange={handleChange} name='ans3' className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="title" className="form-label">Choix 4</label>
+                        <label htmlFor="title" className="form-label">Choix 4</label>
                         <input type="text" onChange={handleChange} name='ans4' className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="title" className="form-label">Bonne réponse</label>
+                        <label htmlFor="title" className="form-label">Bonne réponse</label>
                         <input type="text" onChange={handleChange} name='right_ans' className="form-control"/>
                     </div>
                     <button type="button" onClick={formSubmit} className="btn btn-primary">Enregistrer</button>

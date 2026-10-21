@@ -258,3 +258,47 @@
     justify-content: flex-start;
   }
 }
+
+.ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+
+.ai-suggestions button {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #cfe0d8;
+  border-radius: 999px;
+  color: #17665b;
+  background: #f3f8f5;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.ai-suggestions button:hover:not(:disabled) {
+  background: #e2f0e9;
+}
+
+.ai-formatted-answer p {
+  margin: 0 0 0.45rem;
+}
+
+.ai-formatted-answer ul {
+  margin: 0 0 0.5rem;
+  padding-left: 1.2rem;
+}
+
+.ai-formatted-answer li {
+  margin-bottom: 0.25rem;
+}
+
+.ai-typing {
+  opacity: 0.7;
+  animation: ai-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes ai-blink {
+  50% { opacity: 0.35; }
+}

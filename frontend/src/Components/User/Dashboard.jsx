@@ -39,7 +39,7 @@ const Dashboard = () => {
                     <div className='card border-primary'>
                       <h5 className='card-header bg-warning text-white'>Formations suivies</h5>
                       <div className='card-body'>
-                        <h3><Link to="/my-courses" className='text-warning'>{dashbarData.enrolled_courses} <i class="bi bi-cart-check-fill"></i></Link></h3>
+                        <h3><Link to="/my-courses" className='text-warning'>{dashbarData.enrolled_courses} <i className="bi bi-cart-check-fill"></i></Link></h3>
                       </div>
                     </div>
                   </div>
@@ -47,7 +47,7 @@ const Dashboard = () => {
                     <div className='card border-primary'>
                       <h5 className='card-header bg-success text-white'>Formations favorites</h5>
                       <div className='card-body'>
-                        <h3><Link to="/favorite-courses" className='text-success'>{dashbarData.favorite_courses} <i class="bi bi-heart-fill text-success"></i></Link></h3>
+                        <h3><Link to="/favorite-courses" className='text-success'>{dashbarData.favorite_courses} <i className="bi bi-heart-fill text-success"></i></Link></h3>
                       </div>
                     </div>
                   </div>
@@ -55,7 +55,7 @@ const Dashboard = () => {
                     <div className='card border-primary'>
                       <h5 className='card-header bg-info text-white'>Devoirs terminés</h5>
                       <div className='card-body'>
-                        <h3><Link to="/my-assignments">{dashbarData.complete_assignments} <i class="bi bi-journal-check"></i></Link></h3>
+                        <h3><Link to="/my-assignments">{dashbarData.complete_assignments} <i className="bi bi-journal-check"></i></Link></h3>
                       </div>
                     </div>
                   </div>
@@ -63,7 +63,7 @@ const Dashboard = () => {
                     <div className='card border-primary'>
                       <h5 className='card-header bg-danger text-white'>Devoirs à terminer</h5>
                       <div className='card-body'>
-                        <h3><Link to="/my-assignments" className='text-danger'>{dashbarData.pending_assignments} <i class="bi bi-journal-x"></i></Link></h3>
+                        <h3><Link to="/my-assignments" className='text-danger'>{dashbarData.pending_assignments} <i className="bi bi-journal-x"></i></Link></h3>
                       </div>
                     </div>
                   </div>

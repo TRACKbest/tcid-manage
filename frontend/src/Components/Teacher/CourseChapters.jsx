@@ -1,112 +1,136 @@
-import React from 'react'
-import TeacherSidebar from './TeacherSidebar'
-import { useEffect } from 'react'
-import { useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { Link } from 'react-router-dom'
+import React, { useCallback, useEffect, useState } from 'react'
 import axios from 'axios'
+import Swal from 'sweetalert2'
+import { Link, useParams } from 'react-router-dom'
+import TeacherSidebar from './TeacherSidebar'
+import { formatAriary } from '../format'
+import './ChapterEditor.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const CourseChapters = () => {
+  const { course_id: courseId } = useParams()
+  const teacherId = localStorage.getItem('teacherId')
+  const [course, setCourse] = useState(null)
+  const [chapters, setChapters] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-    const [chapterData, setChapterData]=useState([]);
-
-    const [totalResult, settotalResult]=useState([0]);    
-
-    const {course_id}=useParams();
-
-    useEffect(()=>{
-      try{
-          axios.get(baseUrl+'/course-chapters/'+course_id)
-          .then((res)=>{
-            settotalResult(res.data.length)
-            setChapterData(res.data)
-          });
-      }catch(error){
-          console.log(error);
-      }
-    },[course_id]);
-
-    const Swal = require('sweetalert2');
-
-    const handleDeleteClick = (chapter_id) =>{
-        Swal.fire({
-            title: 'Confirmer la suppression',
-            text: 'Voulez-vous vraiment supprimer ce chapitre ?',
-            icon: 'info',
-            confirmButtonText: 'Supprimer',
-            cancelButtonText: 'Annuler',
-            showCancelButton:true
-          }).then((result)=>{
-            if(result.isConfirmed){
-                try{
-                    axios.delete(baseUrl+'/chapter/'+chapter_id)
-                    .then((res)=>{
-                        Swal.fire('Suppression effectuée', 'Le chapitre a été supprimé.', 'success')
-                        try{
-                            axios.get(baseUrl+'/course-chapters/'+course_id)
-                            .then((res)=>{
-                              settotalResult(res.data.length)
-                              setChapterData(res.data)
-                            });
-                        }catch(error){
-                            console.log(error);
-                        }
-                    })
-            }catch(error){
-                Swal.fire('Erreur', 'Le chapitre n’a pas pu être supprimé.', 'error');
-            }
-            }
-            else{
-                Swal.fire('Suppression annulée', 'Aucune modification n’a été effectuée.', 'info');
-            }
-          })
+  const load = useCallback(async () => {
+    try {
+      const [courseResponse, chapterResponse] = await Promise.all([
+        axios.get(`${baseUrl}/course/${courseId}/`),
+        axios.get(`${baseUrl}/course-chapters/${courseId}`, { params: { teacher_id: teacherId } }),
+      ])
+      setCourse(courseResponse.data)
+      setChapters(chapterResponse.data)
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || 'Le programme n’a pas pu être chargé.')
+    } finally {
+      setLoading(false)
     }
+  }, [courseId, teacherId])
+
+  useEffect(() => {
+    document.title = 'TCiD Center | Programme de la formation'
+    load()
+  }, [load])
+
+  const move = async (index, direction) => {
+    const target = index + direction
+    if (target < 0 || target >= chapters.length) return
+    const reordered = [...chapters]
+    const [item] = reordered.splice(index, 1)
+    reordered.splice(target, 0, item)
+    setChapters(reordered)
+    try {
+      await axios.post(`${baseUrl}/course-chapters/${courseId}/reorder/`, {
+        chapter_ids: reordered.map((chapter) => chapter.id),
+      }, { params: { teacher_id: teacherId } })
+      await load()
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || 'L’ordre n’a pas pu être enregistré.')
+      load()
+    }
+  }
+
+  const remove = async (chapter) => {
+    const result = await Swal.fire({
+      title: 'Supprimer cette vidéo ?',
+      text: `« ${chapter.title} » et ses documents seront supprimés définitivement.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Supprimer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#c0392b',
+    })
+    if (!result.isConfirmed) return
+    try {
+      await axios.delete(`${baseUrl}/chapter/${chapter.id}`, { params: { teacher_id: teacherId } })
+      Swal.fire({ title: 'Vidéo supprimée', icon: 'success', toast: true, timer: 2500, position: 'top-right', showConfirmButton: false })
+      load()
+    } catch (requestError) {
+      Swal.fire('Erreur', requestError.response?.data?.detail || 'La vidéo n’a pas pu être supprimée.', 'error')
+    }
+  }
 
   return (
-    <div className='container mt-4'>
-    <div className='row'>
-        <aside className='col-md-3'>
-            <TeacherSidebar />
-        </aside>
-        <section className='col-md-9'>
-            <div className='card'>
-                <h5 className='card-header'> Chapitres ({totalResult}) <Link className='btn btn-success btn-sm float-end ' to={'/add-chapter/'+course_id}>Ajouter un chapitre</Link></h5>
-                <div className='card-body table-responsive'>
-                    <table className='table table-bordered'>
-                        <thead className='text-center'>
-                            <tr>
-                                <th>Titre</th>
-                                <th>Vidéo</th>
-                                <th>Remarques</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className='text-center'>
-                            {chapterData.map((chapter,index) => 
-                                <tr>
-                                <td><Link to={`/edit-chapter/` +chapter.id}>{chapter.title}</Link></td>
-                                <td>
-                                    <video controls width={200}>
-                                        <source src={chapter.video} type='video/webcam' />
-                                        <source src={chapter.video} type='video/mp4' />
-                                    </video>
-                                </td>
-                                <td>{chapter.remarks}</td>
-                                <td className='text-center'>
-                                    <Link to={`/edit-chapter/`+chapter.id} className='btn btn-info text-white btn-sm mb-2 me-2 text-center'><i className='bi bi-pencil-square'></i></Link>
-                                    <button onClick={()=>handleDeleteClick(chapter.id)} to={`/delete-chapter/`+chapter.id} className='btn btn-danger  ms-2 btn-sm mb-2 me-2 text-center '><i className='bi bi-trash'></i></button>
-                                </td>
-                            </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div className="container mt-4">
+      <div className="row">
+        <aside className="col-md-3"><TeacherSidebar /></aside>
+        <section className="col-md-9">
+          <div className="ce-page">
+            <header className="ce-page-header">
+              <div>
+                <Link to="/teacher-my-course" className="ce-back"><i className="bi bi-arrow-left" aria-hidden="true" /> Mes formations</Link>
+                <h1>{course?.title || 'Programme'}</h1>
+                <p>
+                  {chapters.length} vidéo{chapters.length === 1 ? '' : 's'} ·{' '}
+                  {course?.is_paid ? <>prix <strong>{formatAriary(course.price)}</strong> (1re vidéo gratuite)</> : 'formation gratuite'} ·{' '}
+                  <Link to={`/edit-course/${courseId}`}>modifier le prix</Link>
+                </p>
+              </div>
+              <Link className="btn btn-success" to={`/add-chapter/${courseId}`}><i className="bi bi-plus-lg me-1" aria-hidden="true" />Ajouter une vidéo</Link>
+            </header>
+            {error && <div className="alert alert-danger" role="alert">{error}</div>}
+            {loading && <p role="status">Chargement…</p>}
+            {!loading && chapters.length === 0 && (
+              <div className="ce-card ce-empty-state">
+                <i className="bi bi-camera-reels" aria-hidden="true" />
+                <h2>Aucune vidéo pour l’instant</h2>
+                <p>Commencez par la vidéo de présentation : elle sera gratuite pour donner envie aux apprenants.</p>
+                <Link className="btn btn-primary" to={`/add-chapter/${courseId}`}>Ajouter la première vidéo</Link>
+              </div>
+            )}
+            <ol className="ce-chapter-list">
+              {chapters.map((chapter, index) => (
+                <li className="ce-card ce-chapter-row" key={chapter.id}>
+                  <div className="ce-order">
+                    <button type="button" className="ce-icon" disabled={index === 0} onClick={() => move(index, -1)} aria-label={`Monter ${chapter.title}`}><i className="bi bi-arrow-up" aria-hidden="true" /></button>
+                    <strong>{index + 1}</strong>
+                    <button type="button" className="ce-icon" disabled={index === chapters.length - 1} onClick={() => move(index, 1)} aria-label={`Descendre ${chapter.title}`}><i className="bi bi-arrow-down" aria-hidden="true" /></button>
+                  </div>
+                  {chapter.video
+                    ? <video className="ce-thumb" preload="metadata" src={chapter.video} muted><track kind="captions" /></video>
+                    : <div className="ce-thumb ce-thumb-empty"><i className="bi bi-camera-video-off" aria-hidden="true" /></div>}
+                  <div className="ce-chapter-copy">
+                    <h2><Link to={`/edit-chapter/${chapter.id}`}>{chapter.title}</Link></h2>
+                    <div className="ce-badges">
+                      {chapter.is_free ? <span className="ce-badge is-free">Gratuite</span> : <span className="ce-badge is-paid">Payante</span>}
+                      <span className="ce-badge"><i className="bi bi-paperclip" aria-hidden="true" />{chapter.documents.length} document{chapter.documents.length === 1 ? '' : 's'}</span>
+                    </div>
+                  </div>
+                  <div className="ce-row-actions">
+                    <Link className="btn btn-outline-primary btn-sm" to={`/edit-chapter/${chapter.id}`}><i className="bi bi-pencil-square me-1" aria-hidden="true" />Modifier</Link>
+                    <button className="btn btn-outline-danger btn-sm" type="button" onClick={() => remove(chapter)}><i className="bi bi-trash" aria-hidden="true" /><span className="visually-hidden">Supprimer</span></button>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
+      </div>
     </div>
-</div>
   )
 }
 

@@ -143,13 +143,13 @@ const MyUsers = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-people-fill"> </i>Demandes et apprenants inscrits
+                    <h5 className='card-header'><i className="bi bi-people-fill"> </i>Demandes et apprenants inscrits
                     {pendingCount > 0 && <button type="button" className="btn btn-success btn-sm float-end" onClick={approveAllStudents}><i className="bi bi-check2-all" aria-hidden="true"></i> Approuver tout ({pendingCount})</button>}
                     <Link to="/groups" className="btn btn-primary btn-sm float-end">
                         <i className="bi bi-chat-square-text" aria-hidden="true"></i> Mes groupes
                     </Link>
                     </h5>
-                    <div className='card-body' class="table-responsive">
+                    <div className='card-body table-responsive'>
                         {pageErrorMsg && <div className="alert alert-danger" role="alert">{pageErrorMsg}</div>}
                         {approvalMessage && <div className="alert alert-success" role="status">{approvalMessage}</div>}
                         {isLoading && <p role="status">Chargement des apprenants…</p>}
@@ -182,7 +182,7 @@ const MyUsers = () => {
                                         <Link to={`/add-assignment/${row.student.id}/${teacherId}`} className='btn btn-sm btn-info mb-2 me-2 text-dark'>Ajouter un devoir</Link>
                                         <button id={`open-chat-${row.student.id}`} type="button" aria-label={`Discuter avec ${row.student.fullname}`} title="Ouvrir la conversation" data-bs-toggle="modal" data-bs-target={`#msgModal${index}`} className='btn btn-sm btn-success mb-2'><i className="bi bi-chat-dots" aria-hidden="true"></i></button>
 
-                                                <div className="modal fade" id={`msgModal${index}`} tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                                <div className="modal fade" id={`msgModal${index}`} tabIndex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                                 <div className="modal-dialog  modal-fullscreen">
                                                     <div className="modal-content">
                                                     <div className="modal-header">
@@ -203,7 +203,7 @@ const MyUsers = () => {
                                                                 {errorMsg && <p className='text-danger'>{errorMsg}</p>}
                                                             <form className="chat-composer" onSubmit={(event)=>{event.preventDefault(); formSubmit(row.student.id)}}>
                                                                 <div className="mb-3">
-                                                                    <label for={`message-${row.student.id}`} className="form-label">Message</label>
+                                                                    <label htmlFor={`message-${row.student.id}`} className="form-label">Message</label>
                                                                     <textarea id={`message-${row.student.id}`} className='form-control' value={msgData.msg_to} name='msg_to' rows="2" placeholder="Écrire un message..." onChange={handleChange}></textarea>
                                                                 </div>
                                                                 <button type="submit" className="btn btn-success chat-send-button" aria-label="Envoyer le message" title="Envoyer le message"><i className="bi bi-send-fill" aria-hidden="true"></i><span>Envoyer</span></button>

@@ -1,131 +1,107 @@
-import React from 'react'
-import TeacherSidebar from './TeacherSidebar'
-import { useEffect } from 'react'
-import { useState } from 'react'
-import { useParams } from 'react-router-dom'
-import Swal from 'sweetalert2'
+import React, { useEffect, useState } from 'react'
 import axios from 'axios'
+import Swal from 'sweetalert2'
+import { Link, useParams } from 'react-router-dom'
+import TeacherSidebar from './TeacherSidebar'
+import ChapterForm from './ChapterForm'
+import ChapterDocumentsManager from './ChapterDocumentsManager'
+import './ChapterEditor.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const EditChapter = () => {
+  const { chapter_id: chapterId } = useParams()
+  const teacherId = localStorage.getItem('teacherId')
+  const [chapter, setChapter] = useState(null)
+  const [values, setValues] = useState({ title: '', description: '', video: null, remarks: '', is_free_preview: false })
+  const [isFirstChapter, setIsFirstChapter] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-    useEffect(()=>{
-        document.title='TCiD Center | Modifier un chapitre'
-      })
-
-      const [chapterData,setChapterData]=useState({
-        title:'',
-        description:'',
-        prev_video:'',
-        video:'',
-        remarks:''
-      });
-
-      const handleChange=(event)=>{
-        setChapterData({
-            ...chapterData,
-            [event.target.name]:event.target.value
-        });
-      }
-
-      const handleFileChange=(event)=>{
-        setChapterData({
-            ...chapterData,
-            [event.target.name]:event.target.files[0]
+  useEffect(() => {
+    document.title = 'TCiD Center | Modifier une vidéo'
+    axios.get(`${baseUrl}/chapter/${chapterId}`, { params: { teacher_id: teacherId } })
+      .then(async (response) => {
+        setChapter(response.data)
+        setValues({
+          title: response.data.title || '',
+          description: response.data.description || '',
+          video: null,
+          remarks: response.data.remarks || '',
+          is_free_preview: response.data.is_free_preview,
         })
-      }
-      const {chapter_id}=useParams();
-      
-      const formSubmit=()=>{
-        const _formData=new FormData();
-        _formData.append('title',chapterData.title);
-        _formData.append('description',chapterData.description);
-        if(chapterData.video!==''){
-            _formData.append('video',chapterData.video,chapterData.video.name);
-        }
-        _formData.append('remarks',chapterData.remarks);
+        const chapters = await axios.get(`${baseUrl}/course-chapters/${response.data.course}`, { params: { teacher_id: teacherId } })
+        setIsFirstChapter(chapters.data[0]?.id === response.data.id)
+      })
+      .catch((requestError) => setError(requestError.response?.data?.detail || 'Cette vidéo est introuvable.'))
+  }, [chapterId, teacherId])
 
-        try{
-            axios.put(baseUrl+'/chapter/'+chapter_id,_formData,{
-                headers: {
-                    'content-type':'multipart/form-data'
-                }
-            })
-            .then((res)=>{
-                if(res.status === 200){
-                    Swal.fire({
-                        title:'Chapitre modifié et envoyé avec succès !',
-                        icon:'success',
-                        toast:true,
-                        timer:3000,
-                        position:'top-right',
-                        timerProgressBar: true,
-                        showConfirmButton: false
-                    })
-                }
-            });
-        }catch(error){
-            console.log(error);
-        }
-      };
-
-      useEffect(()=>{
-        try{
-            axios.get(baseUrl+'/chapter/'+chapter_id)
-            .then((res)=>{
-              setChapterData({
-                title:res.data.title,
-                description:res.data.description,
-                prev_video:res.data.video,
-                remarks:res.data.remarks,
-                video:''
-              });
-            });
-        }catch(error){
-            console.log(error);
-        }
-    },[chapter_id]);
+  const submit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    const formData = new FormData()
+    formData.append('title', values.title.trim())
+    formData.append('description', values.description)
+    formData.append('remarks', values.remarks)
+    formData.append('is_free_preview', values.is_free_preview ? 'true' : 'false')
+    if (values.video) formData.append('video', values.video, values.video.name)
+    try {
+      const response = await axios.patch(`${baseUrl}/chapter/${chapterId}`, formData, {
+        params: { teacher_id: teacherId },
+        onUploadProgress: (progress) => {
+          if (progress.total) setUploadProgress(Math.round(progress.loaded * 100 / progress.total))
+        },
+      })
+      setChapter(response.data)
+      setValues((current) => ({ ...current, video: null }))
+      Swal.fire({ title: 'Vidéo mise à jour', icon: 'success', toast: true, timer: 2500, position: 'top-right', showConfirmButton: false })
+    } catch (requestError) {
+      setError(requestError.response?.data?.detail || 'Les modifications n’ont pas pu être enregistrées.')
+    } finally {
+      setSaving(false)
+      setUploadProgress(0)
+    }
+  }
 
   return (
-    <div className='container mt-4'>
-    <div className='row'>
-        <aside className='col-md-3'>
-            <TeacherSidebar />
-        </aside>
-        <section className='col-md-9'>
-            <div className='card'>
-                <h3 className='card-header'>Modifier le chapitre</h3>
-                <div className='card-body'>
-                <form>
-                    <div className="mb-3">
-                        <label for="title" className="form-label">Titre</label>
-                        <input type="text" value={chapterData.title} onChange={handleChange} name='title' className="form-control"/>
-                    </div>
-                    <div className="mb-3">
-                        <label for="description" className="form-label">Description</label>
-                        <textarea value={chapterData.description} onChange={handleChange} name='description' className='form-control'></textarea>
-                    </div>
-                    <div className="mb-3">
-                        <label for="video" className="form-label">Vidéo</label>
-                        <input type="file" onChange={handleFileChange} name='video' className="form-control" id="inputGroupFile02" />
-                        {chapterData.prev_video && 
-                            <video controls width='100%' className='mt-2' >
-                                <source src={chapterData.prev_video} type='video/mp4' />
-                            </video>
-                        }
-                    </div>
-                    <div className="mb-3">
-                        <label for="techs" className="form-label">Remarques</label>
-                        <textarea value={chapterData.remarks} className='form-control' onChange={handleChange} name='remarks' placeholder='Présentation des notions fondamentales.'></textarea>
-                    </div>
-                    <button type="button" onClick={formSubmit} className="btn btn-primary">Enregistrer</button>
-                    </form>
+    <div className="container mt-4">
+      <div className="row">
+        <aside className="col-md-3"><TeacherSidebar /></aside>
+        <section className="col-md-9">
+          {!chapter && !error && <p role="status">Chargement…</p>}
+          {!chapter && error && <div className="alert alert-danger" role="alert">{error}</div>}
+          {chapter && (
+            <div className="ce-page">
+              <header className="ce-page-header">
+                <div>
+                  <Link to={`/all-chapters/${chapter.course}`} className="ce-back"><i className="bi bi-arrow-left" aria-hidden="true" /> Programme de la formation</Link>
+                  <h1>Modifier « {chapter.title} »</h1>
+                  <p>Les changements sont visibles immédiatement par les apprenants.</p>
                 </div>
+              </header>
+              <form onSubmit={submit}>
+                <ChapterForm
+                  courseId={chapter.course}
+                  teacherId={teacherId}
+                  values={values}
+                  onChange={(changes) => setValues((current) => ({ ...current, ...changes }))}
+                  previousVideo={chapter.video}
+                  isFirstChapter={isFirstChapter}
+                  uploadProgress={uploadProgress}
+                />
+                {error && <div className="alert alert-danger" role="alert">{error}</div>}
+                <div className="ce-actions">
+                  <button className="btn btn-primary" type="submit" disabled={saving || !values.title.trim()}>{saving ? 'Enregistrement…' : 'Enregistrer la vidéo'}</button>
+                </div>
+              </form>
+              <ChapterDocumentsManager chapterId={chapter.id} teacherId={teacherId} />
             </div>
+          )}
         </section>
+      </div>
     </div>
-</div>
   )
 }
 

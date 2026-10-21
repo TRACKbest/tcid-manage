@@ -77,19 +77,19 @@ const AddStudyMaterial = () => {
                 <h3 className='card-header'>Ajouter une ressource pédagogique</h3>
                 <div className='card-body'>
                      <div className="mb-3">
-                        <label for="title" className="form-label">Titre</label>
+                        <label htmlFor="title" className="form-label">Titre</label>
                         <input type="text" onChange={handleChange} name='title' className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="description" className="form-label">Description</label>
+                        <label htmlFor="description" className="form-label">Description</label>
                         <textarea onChange={handleChange} name='description' className='form-control'></textarea>
                     </div>
                     <div className="mb-3">
-                        <label for="upload" className="form-label">Document (PDF, Word, Excel, etc. ; vidéos interdites)</label>
+                        <label htmlFor="upload" className="form-label">Document (PDF, Word, Excel, etc. ; vidéos interdites)</label>
                         <input type="file" onChange={handleFileChange} name='upload' className="form-control" id="inputGroupFile02" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.rtf,.odt,.ods,.zip" />
                     </div>
                     <div className="mb-3">
-                        <label for="techs" className="form-label">Remarques</label>
+                        <label htmlFor="techs" className="form-label">Remarques</label>
                         <textarea className='form-control' onChange={handleChange} name='remarks'></textarea>
                     </div>
                     <button type="button" onClick={formSubmit} className="btn btn-primary">Enregistrer</button>

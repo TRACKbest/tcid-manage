@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import axios from 'axios'
+import PriceTag from './PriceTag'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
@@ -49,11 +50,12 @@ const Search = () => {
     <div className='row mb-4'>
       {courseData && courseData.map((course,index) =>
       
-      <div className='col-md-3 mb-4'>
+      <div className='col-md-3 mb-4' key={course.id}>
         <div className="card">
           <Link to={`/detail/${course.id}`}><img src={course.featured_img} height={200}  className="card-img-top" alt={course.title} /></Link>
           <div className="card-body">
             <h5 className="card-title"><Link to={`/detail/${course.id}`}>{course.title}</Link></h5>
+            <PriceTag course={course} />
           </div>
         </div>
       </div>

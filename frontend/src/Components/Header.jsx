@@ -12,7 +12,7 @@ const Header = () => {
   const studentLoginStatus=localStorage.getItem('studentLoginStatus')
   const activeAccountType = localStorage.getItem('activeAccountType')
   const location = useLocation()
-  const studentPaths = ['/user-', '/my-courses', '/my-teachers', '/favorite-courses', '/recommended-courses', '/profile-setting', '/change-password', '/my-assignments', '/course-quiz', '/take-quiz']
+  const studentPaths = ['/user-', '/my-courses', '/my-teachers', '/favorite-courses', '/recommended-courses', '/profile-setting', '/change-password', '/my-assignments', '/my-payments', '/course-quiz', '/take-quiz']
   const teacherPaths = ['/teacher-', '/my-users', '/add-course', '/add-assignment', '/show-assignment', '/enrolled-students', '/study-material', '/attempted-students']
   const routeAccountType = studentPaths.some((path) => location.pathname.startsWith(path))
     ? 'student'

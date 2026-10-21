@@ -40,6 +40,8 @@ urlpatterns =[
 
         path('ai/quizzes/<int:quiz_id>/generate/', ai_api.TeacherQuizGenerationAPIView.as_view()),
 
+        path('ai/courses/<int:course_id>/chapter-description/', ai_api.TeacherChapterDescriptionAPIView.as_view()),
+
         path('ai/study-materials/<int:material_id>/summary/', ai_api.StudyMaterialSummaryAPIView.as_view()),
 
         path('courses/<int:course_id>/live-classrooms/', liveclass_api.CourseLiveClassrooms.as_view()),
@@ -55,6 +57,20 @@ urlpatterns =[
         path('chapter/<int:pk>', views.ChapterDetailView.as_view()),
 
         path('course-chapters/<int:course_id>', views.CourseChapterList.as_view()),
+
+        path('course-chapters/<int:course_id>/reorder/', views.CourseChapterReorder.as_view()),
+
+        path('chapter/<int:chapter_id>/documents/', views.ChapterDocumentList.as_view()),
+
+        path('chapter-documents/<int:pk>/', views.ChapterDocumentDetail.as_view()),
+
+        path('payment-methods/', views.PaymentMethodList.as_view()),
+
+        path('courses/<int:course_id>/payments/', views.CoursePaymentListCreate.as_view()),
+
+        path('student/<int:student_id>/payments/', views.StudentPaymentList.as_view()),
+
+        path('teacher/<int:teacher_id>/payments/', views.TeacherPaymentList.as_view()),
 
         path('teacher-course/<int:teacher_id>', views.TeacherCourseList.as_view()),
 
@@ -160,6 +176,6 @@ urlpatterns =[
         path('message/<int:message_id>/<str:sender_type>/', views.MessageDetail.as_view()),
 
 
-        path('fetch-my-teachers/<int:student_id>', views.MyTeacherList().as_view()),
+        path('fetch-my-teachers/<int:student_id>', views.MyTeacherList.as_view()),
 
 ]

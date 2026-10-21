@@ -13,6 +13,7 @@ from . import models
 from .ai_services import (
     AIServiceUnavailable,
     answer_course_question,
+    describe_chapter,
     generate_quiz_questions,
     grade_open_answer,
     summarize_material,
@@ -61,7 +62,8 @@ class CourseTutorAPIView(APIView):
         if not question or len(question) > 1000:
             return Response({'detail': 'La question doit contenir entre 1 et 1 000 caractères.'}, status=400)
         try:
-            result = answer_course_question(course, question)
+            history = request.data.get('history')
+            result = answer_course_question(course, question, history if isinstance(history, list) else None)
         except (AIServiceUnavailable, ValueError) as error:
             return _ai_error_response(error)
         except Exception as error:
@@ -150,3 +152,15 @@ class TeacherCourseAIAnalyticsAPIView(APIView):
                 for item in counts
             ],
         })
+
+
+class TeacherChapterDescriptionAPIView(APIView):
+    def post(self, request, course_id):
+        course = _teacher_course(course_id, request.data.get('teacher_id'))
+        try:
+            description = describe_chapter(course, request.data.get('title'), request.data.get('notes'))
+        except (AIServiceUnavailable, ValueError) as error:
+            return _ai_error_response(error)
+        except Exception as error:
+            return _ai_error_response(error)
+        return Response({'description': description})

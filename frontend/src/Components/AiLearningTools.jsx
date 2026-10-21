@@ -4,6 +4,39 @@ import './AiLearningTools.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
+const SUGGESTIONS = [
+  'Explique-moi le sujet principal de cette formation simplement',
+  'Quels sont les points clés à retenir ?',
+  'Donne-moi un exemple concret',
+  'Pose-moi 3 questions pour réviser',
+]
+
+const renderInline = (text) => text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => (
+  part.startsWith('**') && part.endsWith('**')
+    ? <strong key={index}>{part.slice(2, -2)}</strong>
+    : <React.Fragment key={index}>{part}</React.Fragment>
+))
+
+const FormattedAnswer = ({ text }) => {
+  const groups = []
+  text.split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.trim()
+    if (!line) return
+    const bullet = line.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/)
+    const last = groups[groups.length - 1]
+    if (bullet && last?.type === 'list') last.items.push(bullet[1])
+    else if (bullet) groups.push({ type: 'list', items: [bullet[1]] })
+    else groups.push({ type: 'paragraph', text: line.replace(/^#+\s*/, '') })
+  })
+  return (
+    <div className="ai-formatted-answer">
+      {groups.map((group, index) => (group.type === 'list'
+        ? <ul key={index}>{group.items.map((item, itemIndex) => <li key={itemIndex}>{renderInline(item)}</li>)}</ul>
+        : <p key={index}>{renderInline(group.text)}</p>))}
+    </div>
+  )
+}
+
 const AiLearningTools = ({ courseId, studentId }) => {
   const [mode, setMode] = useState('tutor')
   const [question, setQuestion] = useState('')
@@ -13,10 +46,14 @@ const AiLearningTools = ({ courseId, studentId }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const askTutor = async (event) => {
-    event.preventDefault()
-    const prompt = question.trim()
+  const askTutor = async (event, suggestion) => {
+    event?.preventDefault()
+    const prompt = (suggestion || question).trim()
     if (!prompt || isLoading) return
+    const history = messages
+      .filter((message) => !message.pending && message.answer)
+      .slice(-3)
+      .map((message) => ({ question: message.question, answer: message.answer }))
     setIsLoading(true)
     setError('')
     setQuestion('')
@@ -26,6 +63,7 @@ const AiLearningTools = ({ courseId, studentId }) => {
       const response = await axios.post(`${baseUrl}/ai/courses/${courseId}/tutor/`, {
         student_id: studentId,
         question: prompt,
+        history,
       })
       setMessages((current) => current.map((message) => (
         message.id === messageId ? { ...message, ...response.data, pending: false } : message
@@ -67,7 +105,7 @@ const AiLearningTools = ({ courseId, studentId }) => {
         <div>
           <p className="ai-learning-eyebrow">ASSISTANCE PÉDAGOGIQUE</p>
           <h2 id="ai-learning-title">Votre assistant de formation</h2>
-          <p>Réponses courtes basées sur les documents de la formation.</p>
+          <p>Des réponses simples, basées sur les vidéos et documents de la formation.</p>
         </div>
       </header>
 
@@ -79,7 +117,7 @@ const AiLearningTools = ({ courseId, studentId }) => {
           role="tab"
           type="button"
         >
-          <i className="bi bi-chat-square-text" aria-hidden="true" /> Tuteur RAG
+          <i className="bi bi-chat-square-text" aria-hidden="true" /> Poser une question
         </button>
         <button
           aria-selected={mode === 'feedback'}
@@ -98,14 +136,23 @@ const AiLearningTools = ({ courseId, studentId }) => {
         <>
           <div className="ai-tutor-history" aria-live="polite">
             {messages.length === 0 && (
-              <p className="ai-learning-empty">Posez une question sur une notion de cette formation.</p>
+              <div className="ai-learning-empty">
+                <p>Posez une question sur une notion de cette formation. Exemples :</p>
+                <div className="ai-suggestions">
+                  {SUGGESTIONS.map((item) => (
+                    <button key={item} type="button" disabled={isLoading} onClick={() => askTutor(null, item)}>{item}</button>
+                  ))}
+                </div>
+              </div>
             )}
             {messages.map((message) => (
               <article className="ai-tutor-turn" key={message.id}>
                 <p className="ai-tutor-question"><span>Vous</span>{message.question}</p>
                 <div className="ai-tutor-response">
                   <span className="ai-tutor-label"><i className="bi bi-stars" aria-hidden="true" /> Tuteur</span>
-                  <p>{message.pending ? 'Recherche dans les ressources de la formation…' : message.answer}</p>
+                  {message.pending
+                    ? <p className="ai-typing">Recherche dans les vidéos et documents de la formation…</p>
+                    : <FormattedAnswer text={message.answer || ''} />}
                   {message.cached && <small>Réponse réutilisée depuis le cache</small>}
                   {message.sources?.length > 0 && <small>Sources : {message.sources.join(', ')}</small>}
                 </div>
@@ -151,7 +198,7 @@ const AiLearningTools = ({ courseId, studentId }) => {
             <i className="bi bi-check2-circle" aria-hidden="true" />
             {isLoading ? 'Analyse…' : 'Obtenir un retour'}
           </button>
-          {feedback && <div className="ai-feedback-result"><span>Retour pédagogique · grille à 4 critères</span><p>{feedback}</p></div>}
+          {feedback && <div className="ai-feedback-result"><span>Retour pédagogique · grille à 4 critères</span><FormattedAnswer text={feedback} /></div>}
         </form>
       )}
     </section>

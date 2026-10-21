@@ -126,18 +126,18 @@ const TeacherProfileSetting = () => {
             <section className='col-md-9'>
                 <div className='card'>
                     <h5 className='card-header'>
-                    <i class="bi bi-person-lines-fill"></i> Paramètres du profil
+                    <i className="bi bi-person-lines-fill"></i> Paramètres du profil
                     </h5>
                     <div className='card-body'>
                     {errorMsg && <div className="alert alert-danger" role="alert">{errorMsg}</div>}
                     <div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Nom complet</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Nom complet</label>
                         <div className="col-sm-10">
                         <input  name='full_name' type="text"  value={teacherData.full_name} onChange={handleChange} className="form-control" />
                         </div>
                     </div>
                     <div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Adresse e-mail</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Adresse e-mail</label>
                         <div className="col-sm-10">
                         <input name='email' type="text" value={teacherData.email} onChange={handleChange} className="form-control"/>
                         </div>
@@ -152,19 +152,19 @@ const TeacherProfileSetting = () => {
                         </div>
                     </div>
                     <div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Téléphone</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Téléphone</label>
                         <div className="col-sm-10">
                         <input name='mobile_no' type="number" value={teacherData.mobile_no} onChange={handleChange} className="form-control"/>
                         </div>
                     </div>
                     <div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Compétences</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Compétences</label>
                         <div className="col-sm-10">
                         <textarea name='skills' type="text"  value={teacherData.skills} onChange={handleChange} className="form-control" id="staticEmail" />
                         </div>
                     </div>
                     <div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Qualifications</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Qualifications</label>
                         <div className="col-sm-10">
                         <textarea name='qualification' type="text"  value={teacherData.qualification} onChange={handleChange} className="form-control" id="staticEmail" />
                         </div>
@@ -172,27 +172,27 @@ const TeacherProfileSetting = () => {
                     <hr />
                     <h4 className='my-4'>Réseaux sociaux</h4>
                     <div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Lien Facebook (facultatif)</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Lien Facebook (facultatif)</label>
                         <div className="col-sm-10">
                         <input  name='face_url' type="text"  value={teacherData.face_url} onChange={handleChange} className="form-control" />
                         </div>
                     </div><div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Lien Instagram (facultatif)</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Lien Instagram (facultatif)</label>
                         <div className="col-sm-10">
                         <input  name='insta_url' type="text"  value={teacherData.insta_url} onChange={handleChange} className="form-control" />
                         </div>
                     </div><div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Lien Twitter (facultatif)</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Lien Twitter (facultatif)</label>
                         <div className="col-sm-10">
                         <input  name='twit_url' type="text"  value={teacherData.twit_url} onChange={handleChange} className="form-control" />
                         </div>
                     </div><div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Site web (facultatif)</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Site web (facultatif)</label>
                         <div className="col-sm-10">
                         <input  name='web_url' type="text"  value={teacherData.web_url} onChange={handleChange} className="form-control" />
                         </div>
                     </div><div className="mb-3 row">
-                        <label for="staticEmail" className="col-sm-2 col-form-label">Lien YouTube (facultatif)</label>
+                        <label htmlFor="staticEmail" className="col-sm-2 col-form-label">Lien YouTube (facultatif)</label>
                         <div className="col-sm-10">
                         <input  name='you_url' type="text"  value={teacherData.you_url} onChange={handleChange} className="form-control" />
                         </div>

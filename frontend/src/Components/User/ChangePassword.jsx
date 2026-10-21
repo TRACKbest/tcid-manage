@@ -81,11 +81,11 @@ const ChangePassword = () => {
             <section className='col-md-9'>
                 <div className='card'>
                     <h5 className='card-header'>
-                    <i class="bi bi-person-bounding-box"/> Modifier le mot de passe
+                    <i className="bi bi-person-bounding-box"/> Modifier le mot de passe
                     </h5>
                     <div className='card-body'>
                         <div className="mb-3 row">
-                        <label for="inputPassword" className="col-sm-2 col-form-label">Nouveau mot de passe</label>
+                        <label htmlFor="inputPassword" className="col-sm-2 col-form-label">Nouveau mot de passe</label>
                         <div className="col-sm-10">
                         <input type="text" name='password' value={studentData.password} onChange={handleChange} className="form-control" id="inputPassword" />
                         </div>    

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db import models as models_db
 from . import models
 
 admin.site.site_header = 'Administration TCiD Center'
@@ -56,6 +57,7 @@ class TeacherAdmin(admin.ModelAdmin):
 	search_fields = ('full_name', 'email', 'qualification')
 	exclude = ('password',)
 	actions = (approve_teachers, block_teachers, reactivate_teachers)
+	formfield_overrides = {models_db.URLField: {'assume_scheme': 'https'}}
 
 
 @admin.register(models.CourseCategory)
@@ -66,7 +68,7 @@ class CourseCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(models.Course)
 class CourseAdmin(admin.ModelAdmin):
-	list_display = ('title', 'category', 'teacher', 'course_views')
+	list_display = ('title', 'category', 'teacher', 'price', 'course_views')
 	list_filter = ('category',)
 	search_fields = ('title', 'teacher__full_name', 'techs')
 	list_select_related = ('category', 'teacher')
@@ -97,8 +99,30 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(models.Chapter)
 class ChapterAdmin(admin.ModelAdmin):
-	list_display = ('title', 'course')
+	list_display = ('title', 'course', 'position', 'is_free_preview')
 	search_fields = ('title', 'course__title')
+
+
+@admin.register(models.ChapterDocument)
+class ChapterDocumentAdmin(admin.ModelAdmin):
+	list_display = ('title', 'chapter', 'upload', 'created_at')
+	search_fields = ('title', 'chapter__title', 'chapter__course__title')
+
+
+@admin.register(models.CoursePayment)
+class CoursePaymentAdmin(admin.ModelAdmin):
+	list_display = ('reference', 'student', 'course', 'method', 'amount', 'status', 'created_at')
+	list_filter = ('status', 'method')
+	search_fields = ('reference', 'student__fullname', 'course__title')
+
+	def has_add_permission(self, request):
+		return False
+
+	def has_change_permission(self, request, obj=None):
+		return False
+
+	def has_delete_permission(self, request, obj=None):
+		return False
 
 
 @admin.register(models.Quiz)

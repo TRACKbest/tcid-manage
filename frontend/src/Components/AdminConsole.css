@@ -895,3 +895,439 @@
     grid-column: auto;
   }
 }
+
+/* ===== Professional theme: dark navigation, KPI dashboard, payment validation ===== */
+.admin-sidebar {
+  color: #d5e6e2;
+  background: linear-gradient(180deg, #0e2628 0%, #123234 100%);
+  border-right: 0;
+}
+
+.admin-sidebar-brand {
+  color: #fff;
+}
+
+.admin-nav-item {
+  color: #c4d8d4;
+}
+
+.admin-nav-item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.admin-nav-item.is-active {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(42, 161, 137, 0.45), rgba(42, 161, 137, 0.15));
+  box-shadow: inset 3px 0 0 #2fd4b0;
+}
+
+.admin-nav-group h2 {
+  color: #7fa39c;
+}
+
+.admin-nav-count {
+  color: #0e2628;
+  background: #9fe3d2;
+}
+
+.admin-nav-count.is-alert {
+  color: #fff;
+  background: #e8622c;
+  animation: admin-pulse 2s ease-in-out infinite;
+}
+
+@keyframes admin-pulse {
+  50% { box-shadow: 0 0 0 5px rgba(232, 98, 44, 0.25); }
+}
+
+.admin-logout-button {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #d5e6e2;
+}
+
+.admin-logout-button:hover {
+  color: #fff;
+  background: rgba(232, 98, 44, 0.85);
+}
+
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1.2rem;
+}
+
+.admin-kpi {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1.05rem 1.15rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  color: var(--admin-ink);
+  background: var(--admin-surface);
+  box-shadow: 0 6px 18px rgba(16, 46, 48, 0.05);
+  font: inherit;
+  text-align: left;
+}
+
+button.admin-kpi {
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+button.admin-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(16, 46, 48, 0.1);
+}
+
+.admin-kpi span {
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.admin-kpi strong {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+
+.admin-kpi small {
+  color: var(--admin-muted);
+  font-size: 0.8rem;
+}
+
+.admin-kpi.is-alert {
+  border-color: #f6b892;
+  background: linear-gradient(135deg, #fff4ec, #fff);
+}
+
+.admin-kpi.is-alert strong {
+  color: #c94d1b;
+}
+
+.admin-kpi.is-money strong {
+  color: var(--admin-green);
+}
+
+.admin-overview-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-overview-columns .admin-frequent-questions {
+  margin: 0;
+}
+
+.admin-bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.8rem;
+  min-height: 200px;
+  padding-top: 0.5rem;
+}
+
+.admin-bar {
+  display: grid;
+  flex: 1;
+  grid-template-rows: auto 160px auto;
+  gap: 0.35rem;
+  justify-items: center;
+  min-width: 0;
+}
+
+.admin-bar-track {
+  display: flex;
+  width: 100%;
+  max-width: 56px;
+  align-items: flex-end;
+  border-radius: 10px;
+  background: #eef5f2;
+}
+
+.admin-bar-track i {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #2aa189, #167466);
+}
+
+.admin-bar-value,
+.admin-bar-label {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-bar-label {
+  font-weight: 800;
+}
+
+.admin-top-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: top;
+}
+
+.admin-top-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: var(--admin-canvas);
+  counter-increment: top;
+}
+
+.admin-top-list li::before {
+  content: counter(top);
+  display: grid;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--admin-green);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.admin-top-list span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-top-list small {
+  color: var(--admin-muted);
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.9rem;
+  padding: 0.3rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  background: var(--admin-surface);
+}
+
+.admin-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: 9px;
+  color: var(--admin-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-tabs button span {
+  min-width: 1.5rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--admin-canvas);
+  font-size: 0.72rem;
+}
+
+.admin-tabs button.is-active {
+  color: #fff;
+  background: var(--admin-green);
+}
+
+.admin-tabs button.is-active span {
+  color: var(--admin-green);
+  background: #fff;
+}
+
+.admin-select {
+  min-height: 2.5rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 0.5rem;
+  background: var(--admin-surface);
+  font: inherit;
+  font-size: 0.86rem;
+}
+
+.admin-cell-sub {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+}
+
+.admin-status {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-status-pending { color: #8a5a00; background: #fff1c2; }
+.admin-status-validated { color: #0f7a3a; background: #dcfce7; }
+.admin-status-rejected { color: #9b1c1c; background: #fde2e2; }
+
+.admin-data-table code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  background: var(--admin-canvas);
+  font-size: 0.82rem;
+}
+
+.admin-payment-review {
+  width: min(720px, 100%);
+}
+
+.admin-payment-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+}
+
+.admin-payment-facts div {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: var(--admin-canvas);
+}
+
+.admin-payment-facts dt {
+  color: var(--admin-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.admin-payment-facts dd {
+  display: grid;
+  margin: 0.15rem 0 0;
+  font-weight: 700;
+}
+
+.admin-payment-facts dd small {
+  color: var(--admin-muted);
+  font-weight: 500;
+}
+
+.admin-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  background: var(--admin-canvas);
+}
+
+.admin-segmented button {
+  min-height: 2.5rem;
+  border: 0;
+  border-radius: 9px;
+  color: var(--admin-muted);
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.admin-segmented button.is-active {
+  color: #fff;
+  background: var(--admin-green);
+}
+
+.admin-segmented button.is-active.is-danger {
+  background: var(--admin-coral);
+}
+
+.admin-match {
+  color: #0f7a3a !important;
+  font-weight: 700;
+}
+
+.admin-mismatch {
+  display: block;
+  color: #b54d38 !important;
+  font-weight: 700;
+}
+
+.admin-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.admin-chip-row button {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--admin-line);
+  border-radius: 999px;
+  background: var(--admin-surface);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.admin-approve-button.is-large,
+.admin-delete-button.is-large {
+  min-height: 2.6rem;
+  padding: 0.55rem 1.1rem;
+  font-weight: 800;
+}
+
+.admin-approve-button:disabled,
+.admin-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 1100px) {
+  .admin-overview-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .admin-payment-facts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.admin-payments-table {
+  min-width: 1040px;
+}
+
+.admin-payments-table td {
+  vertical-align: top;
+}
+
+.admin-payments-table .is-nowrap,
+.admin-payments-table td:nth-child(4),
+.admin-payments-table td:nth-child(5),
+.admin-payments-table td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.admin-payment-review .admin-form-hint {
+  grid-column: 1 / -1;
+}

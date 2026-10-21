@@ -1,150 +1,126 @@
-import React from 'react'
-import TeacherSidebar from './TeacherSidebar'
-import { useEffect } from 'react'
-import { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import axios from 'axios'
-import { useParams } from 'react-router-dom'
 import Swal from 'sweetalert2'
+import { Link, useParams } from 'react-router-dom'
+import TeacherSidebar from './TeacherSidebar'
+import RichTextEditor from '../RichTextEditor'
+import { formatAriary } from '../format'
+import './ChapterEditor.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
 const EditCourse = () => {
-    useEffect(()=>{
-        document.title='TCiD Center | Modifier une formation'
-      })
+  const { course_id: courseId } = useParams()
+  const teacherId = localStorage.getItem('teacherId')
+  const [categories, setCategories] = useState([])
+  const [values, setValues] = useState(null)
+  const [image, setImage] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
-      const [cats,setCats]=useState([])
-      const [courseData,setCourseData]=useState({
-        category:'',
-        title:'',
-        description:'',
-        prev_img:'',
-        f_img:'',
-        techs:''
-      });
-
-      const {course_id}=useParams();
-
-      useEffect(()=>{
-        try{
-            axios.get(baseUrl+'/category')
-            .then((res)=>{
-                    setCats(res.data)
-            });
-        }catch(error){
-            console.log(error)
-        }
-
-        try{
-            axios.get(baseUrl+'/teacher-course-detail/'+course_id)
-            .then((res)=>{
-                setCourseData({
-                category:res.data.category,
-                title:res.data.title,
-                description:res.data.description,
-                prev_img:res.data.featured_img,
-                f_img:'',
-                techs:res.data.techs,
-              });
-            });
-        }catch(error){
-            console.log(error);
-        }
-    },[course_id]);
-
-      const handleChange=(event)=>{
-        setCourseData({
-            ...courseData,
-            [event.target.name]:event.target.value
-        });
-      }
-
-      const handleFileChange=(event)=>{
-        setCourseData({
-            ...courseData,
-            [event.target.name]:event.target.files[0]
+  useEffect(() => {
+    document.title = 'TCiD Center | Modifier une formation'
+    Promise.all([
+      axios.get(`${baseUrl}/category/`),
+      axios.get(`${baseUrl}/teacher-course-detail/${courseId}`),
+    ])
+      .then(([categoryResponse, courseResponse]) => {
+        setCategories(categoryResponse.data)
+        const course = courseResponse.data
+        setValues({
+          category: String(course.category?.id ?? course.category ?? ''),
+          title: course.title || '',
+          description: course.description || '',
+          techs: course.techs || '',
+          price: String(course.price ?? 0),
+          prevImage: course.featured_img,
         })
-      }
+      })
+      .catch((requestError) => setError(requestError.response?.data?.detail || 'La formation n’a pas pu être chargée.'))
+  }, [courseId])
 
-      const teacherId=localStorage.getItem('teacherId')
+  const update = (changes) => setValues((current) => ({ ...current, ...changes }))
 
-      const formSubmit=()=>{
-        const _formData=new FormData();
-        _formData.append('category',courseData.category);
-        _formData.append('teacher',teacherId);
-        _formData.append('title',courseData.title);
-        _formData.append('description',courseData.description);
-        if(courseData.f_img!==''){
-            _formData.append('featured_img',courseData.f_img,courseData.f_img.name);
-        }
-        _formData.append('techs',courseData.techs);
+  const submit = async (event) => {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    const formData = new FormData()
+    formData.append('category', values.category)
+    formData.append('teacher', teacherId)
+    formData.append('title', values.title.trim())
+    formData.append('description', values.description)
+    formData.append('techs', values.techs)
+    formData.append('price', String(Number(values.price) || 0))
+    if (image) formData.append('featured_img', image, image.name)
+    try {
+      await axios.patch(`${baseUrl}/teacher-course-detail/${courseId}`, formData)
+      Swal.fire({ title: 'Formation enregistrée', icon: 'success', toast: true, timer: 2500, position: 'top-right', showConfirmButton: false })
+    } catch (requestError) {
+      const data = requestError.response?.data
+      setError(data?.price?.[0] || data?.detail || 'Les modifications n’ont pas pu être enregistrées.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
-        try{
-            axios.put(baseUrl+'/teacher-course-detail/'+course_id,_formData,{
-                headers: {
-                    'content-type':'multipart/form-data'
-                }
-            })
-            .then((res)=>{
-                if(res.status === 200){
-                    Swal.fire({
-                        title:'Formation modifiée avec succès',
-                        icon:'success',
-                        toast:true,
-                        timer:3000,
-                        position:'top-right',
-                        timerProgressBar: true,
-                        showConfirmButton: false
-                    });
-                }
-            });
-        }catch(error){
-            console.log(error);
-        }
-      };
+  const price = Number(values?.price) || 0
 
   return (
-    <div className='container mt-4'>
-    <div className='row'>
-        <aside className='col-md-3'>
-            <TeacherSidebar />
-        </aside>
-        <section className='col-md-9'>
-            <div className='card'>
-                <h3 className='card-header'>Modifier la formation</h3>
-                <div className='card-body'>
-                <div className="mb-3">
-                        <label for="title" className="form-label">Catégorie</label>
-                        <select defaultValue={courseData.category} name='category' onChange={handleChange} className="form-control">
-                            {cats.map((category,index)=>{return <option key={index} value={category.id}>{category.title}</option>})}
-                        </select>
-                    </div>
-                    <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Titre</label>
-                        <input defaultValue={courseData.title} type="text" onChange={handleChange} name='title' className="form-control"/>
-                    </div>
-                    <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Description</label>
-                        <textarea defaultValue={courseData.description} onChange={handleChange} name='description' className='form-control' id='description'></textarea>
-                    </div>
-                    <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Image de couverture</label>
-                        <input defaultValue={courseData.featured_img} type="file" onChange={handleFileChange} name='f_img' className="form-control"/>
-                        {courseData.prev_img && 
-                            <p className='mt-2'><img src={courseData.prev_img}  width='300' alt={courseData.title}/></p>
-                        }
-                    </div>
-                    <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Mots-clés</label>
-                        <textarea defaultValue={courseData.techs} onChange={handleChange} name='techs' className='form-control' placeholder='Programmation, développement web…'></textarea>
-                    </div>
-                    <button type="submit" onClick={formSubmit} className="btn btn-primary">Enregistrer</button>
+    <div className="container mt-4">
+      <div className="row">
+        <aside className="col-md-3"><TeacherSidebar /></aside>
+        <section className="col-md-9">
+          {!values && !error && <p role="status">Chargement…</p>}
+          {error && !values && <div className="alert alert-danger" role="alert">{error}</div>}
+          {values && (
+            <form className="ce-page" onSubmit={submit}>
+              <header className="ce-page-header">
+                <div>
+                  <Link to="/teacher-my-course" className="ce-back"><i className="bi bi-arrow-left" aria-hidden="true" /> Mes formations</Link>
+                  <h1>Modifier la formation</h1>
+                  <p>Titre, prix, image et présentation visibles sur la page publique.</p>
                 </div>
-            </div>
-        </section>
-    </div>
+                <Link className="btn btn-outline-primary" to={`/all-chapters/${courseId}`}><i className="bi bi-collection-play me-1" aria-hidden="true" />Gérer les vidéos</Link>
+              </header>
 
-  </div>
+              <section className="ce-card">
+                <div className="ce-card-heading"><div><p className="ce-kicker">INFORMATIONS</p><h2>Informations principales</h2></div></div>
+                <label className="ce-field"><span>Catégorie</span>
+                  <select className="form-select" value={values.category} onChange={(event) => update({ category: event.target.value })}>
+                    {categories.map((category) => <option key={category.id} value={category.id}>{category.title}</option>)}
+                  </select>
+                </label>
+                <label className="ce-field"><span>Titre <b>*</b></span><input required maxLength="150" value={values.title} onChange={(event) => update({ title: event.target.value })} /></label>
+                <label className="ce-field"><span>Mots-clés <small>séparés par des virgules</small></span><input value={values.techs} onChange={(event) => update({ techs: event.target.value })} placeholder="Python, Django, Web…" /></label>
+                <label className="ce-field"><span>Image de couverture <small>(laisser vide pour garder l’image actuelle)</small></span><input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] || null)} /></label>
+                {values.prevImage && !image && <img className="ce-video-preview" src={values.prevImage} alt="Couverture actuelle" style={{ objectFit: 'cover' }} />}
+              </section>
+
+              <section className="ce-card">
+                <div className="ce-card-heading"><div><p className="ce-kicker">PRIX</p><h2>Prix de la formation</h2><p>Vous fixez librement votre prix. Mettez 0 pour une formation gratuite.</p></div></div>
+                <label className="ce-field"><span>Prix en ariary</span>
+                  <div className="ce-price-field"><input type="number" min="0" step="500" value={values.price} onChange={(event) => update({ price: event.target.value })} /><strong>Ar</strong></div>
+                </label>
+                <p className="mb-0 text-muted">{price > 0
+                  ? `Les apprenants regardent la 1re vidéo gratuitement puis paient ${formatAriary(price)} (Orange Money, Airtel Money ou MVola). L’administrateur valide chaque paiement.`
+                  : 'Formation gratuite : vous approuvez vous-même les demandes d’accès.'}</p>
+              </section>
+
+              <section className="ce-card">
+                <div className="ce-card-heading"><div><p className="ce-kicker">PRÉSENTATION</p><h2>Description détaillée</h2><p>Objectifs, public visé, ce que l’apprenant saura faire à la fin.</p></div></div>
+                <RichTextEditor value={values.description} onChange={(description) => update({ description })} placeholder="Présentez votre formation…" />
+              </section>
+
+              {error && <div className="alert alert-danger" role="alert">{error}</div>}
+              <div className="ce-actions ce-sticky-actions">
+                <button className="btn btn-primary" type="submit" disabled={saving || !values.title.trim()}>{saving ? 'Enregistrement…' : 'Enregistrer'}</button>
+              </div>
+            </form>
+          )}
+        </section>
+      </div>
+    </div>
   )
 }
 

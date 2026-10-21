@@ -3,15 +3,16 @@ import 'react-quill/dist/quill.snow.css'
 
 const editorModules = {
   toolbar: [
+    [{ header: [1, 2, 3, false] }],
     ['bold', 'italic', 'underline', 'strike'],
     [{ list: 'ordered' }, { list: 'bullet' }],
-    [{ header: [1, 2, 3, false] }],
-    ['blockquote', 'link'],
+    [{ align: [] }],
+    ['blockquote', 'code-block', 'link'],
     ['clean'],
   ],
 }
 
-const editorFormats = ['bold', 'italic', 'underline', 'strike', 'list', 'bullet', 'header', 'blockquote', 'link']
+const editorFormats = ['header', 'bold', 'italic', 'underline', 'strike', 'list', 'bullet', 'align', 'blockquote', 'code-block', 'link']
 
 const RichTextEditor = ({ value, onChange, placeholder }) => (
   <ReactQuill

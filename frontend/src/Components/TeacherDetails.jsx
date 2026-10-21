@@ -44,9 +44,9 @@ const TeacherDetails = () => {
   return (
     <div className='conatiner mt-4 px-4'class='hod'>
         <div className='row'>
-            <div class="col-lg-3 col-md-6 wow fadeInUp">
-                    <div class="team-item bg-light">
-                        <div class=" position-relative overflow-hidden">
+            <div className="col-lg-3 col-md-6 wow fadeInUp">
+                    <div className="team-item bg-light">
+                        <div className=" position-relative overflow-hidden">
                             <img src={teacherData.profile_img} className="card-img-top img-fluid img-thumbnail aks" alt={teacherData.full_name}/>
                         </div>
                     </div>
@@ -64,19 +64,19 @@ const TeacherDetails = () => {
                 <p className='fw-bold'>Qualifications : {teacherData.qualification}</p>
                 <p className='fw-bold '> Suivre : <br/>
                 {teacherData.face_url &&
-                    <a href={teacherData.face_url} style={icon}><i class="bi bi-facebook px-1 "></i></a>
+                    <a href={teacherData.face_url} style={icon}><i className="bi bi-facebook px-1 "></i></a>
                 }
                 {teacherData.insta_url &&
-                    <a href={teacherData.insta_url} style={icon}><i class="bi bi-instagram ms-1 px-1 text-dark"></i></a>
+                    <a href={teacherData.insta_url} style={icon}><i className="bi bi-instagram ms-1 px-1 text-dark"></i></a>
                 }
                 {teacherData.twit_url &&
-                    <a href={teacherData.twit_url} style={icon}><i class="bi bi-twitter ms-1 px-1"></i></a>
+                    <a href={teacherData.twit_url} style={icon}><i className="bi bi-twitter ms-1 px-1"></i></a>
                 }
                 {teacherData.you_url &&
-                    <a href={teacherData.you_url} style={icon}><i class="bi bi-youtube ms-1 px-1 text-danger"></i></a>
+                    <a href={teacherData.you_url} style={icon}><i className="bi bi-youtube ms-1 px-1 text-danger"></i></a>
                 }
                 {teacherData.web_url &&
-                    <a href={teacherData.web_url} style={icon}><i class="bi bi-globe2 text-dark ms-1 px-1"></i></a>
+                    <a href={teacherData.web_url} style={icon}><i className="bi bi-globe2 text-dark ms-1 px-1"></i></a>
                 }
                 </p>
 
@@ -88,7 +88,7 @@ const TeacherDetails = () => {
                 <h4>Liste des formations</h4>
                 <div className='list-group list-group-flush'>
                     {courseData.map((course,index)=>
-                        <Link to={`/detail/${course.id}`} class="list-group-item">{course.title}</Link>
+                        <Link to={`/detail/${course.id}`} className="list-group-item">{course.title}</Link>
                     )}
                 </div>
             </div>

@@ -25,7 +25,7 @@ const fileKey = (file) => `${file.name}:${file.size}:${file.lastModified}`
 
 const AddCourseWizard = () => {
   const [categories, setCategories] = useState([])
-  const [courseData, setCourseData] = useState({ category: '', title: '', f_img: null, techs: '', description: '' })
+  const [courseData, setCourseData] = useState({ category: '', title: '', f_img: null, techs: '', description: '', price: '0' })
   const [imagePreview, setImagePreview] = useState('')
   const [pdfFiles, setPdfFiles] = useState([])
   const [uploadedPdfKeys, setUploadedPdfKeys] = useState([])
@@ -119,6 +119,7 @@ const AddCourseWizard = () => {
         formData.append('description', skipDescription ? '' : courseData.description)
         formData.append('featured_img', courseData.f_img, courseData.f_img.name)
         formData.append('techs', courseData.techs)
+        formData.append('price', String(Number(courseData.price) || 0))
         const response = await axios.post(`${baseUrl}/course/`, formData, {
           headers: { 'content-type': 'multipart/form-data' },
         })
@@ -141,8 +142,8 @@ const AddCourseWizard = () => {
         setUploadedPdfKeys((current) => [...current, fileKey(file)])
       }
 
-      setSuccessMsg(`Formation créée${pendingFiles.length ? ` avec ${pendingFiles.length} document${pendingFiles.length === 1 ? '' : 's'} PDF` : ''}. Elle est maintenant visible sur le site.`)
-      setCourseData({ category: courseData.category, title: '', f_img: null, techs: '', description: '' })
+      setSuccessMsg(`Formation créée${pendingFiles.length ? ` avec ${pendingFiles.length} document${pendingFiles.length === 1 ? '' : 's'} PDF` : ''}. Ajoutez maintenant vos vidéos depuis « Mes formations » → Vidéos.`)
+      setCourseData({ category: courseData.category, title: '', f_img: null, techs: '', description: '', price: '0' })
       setPdfFiles([])
       setUploadedPdfKeys([])
       setCreatedCourseId(null)
@@ -209,6 +210,11 @@ const AddCourseWizard = () => {
                 <div className="mb-3">
                   <label htmlFor="course-techs" className="form-label">Technologies (facultatif)</label>
                   <input id="course-techs" name="techs" value={courseData.techs} onChange={handleChange} className="form-control" placeholder="Python, React, Django…" />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="course-price" className="form-label">Prix de la formation (Ar)</label>
+                  <input id="course-price" name="price" type="number" min="0" step="500" value={courseData.price} onChange={handleChange} className="form-control" />
+                  <p className="form-text">0 = gratuite. Si la formation est payante, la 1re vidéo reste gratuite et l’administrateur valide les paiements mobile money.</p>
                 </div>
                 <div className="course-wizard-actions"><span className="course-wizard-hint">Les étapes suivantes sont facultatives.</span><button type="button" className="btn btn-primary" disabled={!courseData.title.trim() || !courseData.category || !courseData.f_img} onClick={() => { setErrorMsg(''); setStep(2) }}>Continuer</button></div>
               </section>}

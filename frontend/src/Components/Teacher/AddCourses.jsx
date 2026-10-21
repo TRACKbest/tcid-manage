@@ -116,12 +116,12 @@ const AddCourses = () => {
         </aside>
         <section className='col-md-9'>
             <div className='card'>
-                <h3 className='card-header'><i class="bi bi-plus-square"></i> Ajouter une formation</h3>
+                <h3 className='card-header'><i className="bi bi-plus-square"></i> Ajouter une formation</h3>
                 <div className='card-body'>
                 {errorMsg && <div className="alert alert-danger" role="alert">{errorMsg}</div>}
                 {successMsg && <div className="alert alert-success" role="status">{successMsg}</div>}
                 <div className="mb-3">
-                        <label for="title" className="form-label">Catégorie</label>
+                        <label htmlFor="title" className="form-label">Catégorie</label>
                         <select name='category' value={courseData.category} onChange={handleChange} className="form-control">
                             {cats.length === 0 && <option value="">Aucune catégorie disponible</option>}
                             {cats.map((category,index)=>{return <option key={index} value={category.id}>{category.title}</option>})}
@@ -129,19 +129,19 @@ const AddCourses = () => {
                         {cats.length === 0 && <a href="/admin/" target="_blank" rel="noreferrer">Ajouter une catégorie dans l’administration</a>}
                     </div>
                     <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Titre</label>
+                        <label htmlFor="exampleInputPassword1" className="form-label">Titre</label>
                         <input type="text" onChange={handleChange} name='title' value={courseData.title} className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Description</label>
+                        <label htmlFor="exampleInputPassword1" className="form-label">Description</label>
                         <textarea onChange={handleChange} name='description' value={courseData.description} className='form-control' id='description'></textarea>
                     </div>
                     <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Image de couverture</label>
+                        <label htmlFor="exampleInputPassword1" className="form-label">Image de couverture</label>
                         <input type="file" onChange={handleFileChange} name='f_img' className="form-control" accept="image/*"/>
                     </div>
                     <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Mots-clés</label>
+                        <label htmlFor="exampleInputPassword1" className="form-label">Mots-clés</label>
                         <textarea onChange={handleChange} name='techs' value={courseData.techs} className='form-control' placeholder='Programmation, développement web…'></textarea>
                     </div>
                     <button type="button" onClick={formSubmit} className="btn btn-primary" disabled={isSubmitting || cats.length === 0}>{isSubmitting ? 'Enregistrement…' : 'Enregistrer'}</button>

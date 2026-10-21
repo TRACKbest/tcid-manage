@@ -111,6 +111,14 @@ class LiveClassroomConsumer(AsyncJsonWebsocketConsumer):
                     'display_name': self.display_name,
                     'role': self.role,
                 }
+        elif message_type == 'media_state':
+            payload = {
+                'type': 'media_state',
+                'peer_id': self.peer_id,
+                'microphone': bool(content.get('microphone')),
+                'camera': bool(content.get('camera')),
+                'screen': bool(content.get('screen')),
+            }
         elif message_type == 'raise_hand' and self.role == 'student':
             payload = {'type': 'raise_hand', 'peer_id': self.peer_id, 'up': bool(content.get('up'))}
         elif message_type == 'moderate' and self.role == 'teacher':

@@ -29,6 +29,28 @@ are updated from the GitHub secrets. Optional OpenAI secrets are refreshed
 from GitHub Actions. PostgreSQL, uploaded media, and Caddy's HTTPS certificates
 persist in Docker volumes across deployments.
 
+## Virtual classroom relay (TURN)
+
+Cameras and microphones of remote participants (mobile networks, company or
+home routers) need a TURN relay. The stack runs `coturn` with
+`network_mode: host`; the deployment generates `TURN_SECRET` once and sets
+`TURN_URLS` to `turn:$VPS_HOST:3478` (UDP and TCP). Open these ports in the
+VPS firewall, otherwise remote users will still see a black tile:
+
+- `3478/udp` and `3478/tcp`
+- `49160-49200/udp` (relayed media)
+
+With `ufw`: `sudo ufw allow 3478 && sudo ufw allow 49160:49200/udp`.
+Do not proxy the TURN host through Cloudflare (it does not relay port 3478).
+
+## Mobile money payments
+
+Learners pay by Orange Money, Airtel Money or MVola, then send the reference
+and amount. Only staff users of the admin console (`/admin`) can validate a
+payment, by typing the same reference. The numbers shown to learners can be
+changed with `PAYMENT_ORANGE_NUMBER`, `PAYMENT_AIRTEL_NUMBER`,
+`PAYMENT_MVOLA_NUMBER` and `PAYMENT_ACCOUNT_HOLDER` in the VPS `.env`.
+
 The Compose stack serves the site over HTTP on port 80 and HTTPS on port 443;
 Caddy obtains and renews certificates automatically. Point both the domain and
 its `www` subdomain to the VPS, and allow inbound TCP ports 80 and 443 in the

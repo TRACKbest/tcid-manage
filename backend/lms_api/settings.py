@@ -21,6 +21,40 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
 OPENAI_MAX_TOKENS = int(os.environ.get('OPENAI_MAX_TOKENS', '300'))
 
+# Mobile money accounts shown to learners when they unlock a paid course.
+PAYMENT_ACCOUNT_HOLDER = os.environ.get('PAYMENT_ACCOUNT_HOLDER', 'Alex Fare')
+PAYMENT_ACCOUNTS = {
+    'orange_money': {
+        'number': os.environ.get('PAYMENT_ORANGE_NUMBER', '0379069983'),
+        'holder': PAYMENT_ACCOUNT_HOLDER,
+        'color': '#ff7900',
+    },
+    'airtel_money': {
+        'number': os.environ.get('PAYMENT_AIRTEL_NUMBER', '0332354093'),
+        'holder': PAYMENT_ACCOUNT_HOLDER,
+        'color': '#e40000',
+    },
+    'mvola': {
+        'number': os.environ.get('PAYMENT_MVOLA_NUMBER', '0342534546'),
+        'holder': PAYMENT_ACCOUNT_HOLDER,
+        'color': '#00a651',
+    },
+}
+
+# WebRTC relay (coturn, "use-auth-secret" mode) used by the virtual classroom
+# when peers cannot reach each other directly (mobile networks, strict NAT).
+STUN_URLS = [
+    url.strip()
+    for url in os.environ.get(
+        'STUN_URLS',
+        'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302,stun:stun.cloudflare.com:3478',
+    ).split(',')
+    if url.strip()
+]
+TURN_URLS = [url.strip() for url in os.environ.get('TURN_URLS', '').split(',') if url.strip()]
+TURN_SECRET = os.environ.get('TURN_SECRET', '')
+TURN_CREDENTIAL_TTL = int(os.environ.get('TURN_CREDENTIAL_TTL', str(8 * 60 * 60)))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -177,5 +211,12 @@ MEDIA_ROOT=os.path.join(BASE_DIR, 'media')
 
 
 X_FRAME_OPTIONS = 'ALLOWALL'
+
+# The public API identifies learners/trainers explicitly; it must not depend on
+# the admin console's session cookie (SessionAuthentication would force CSRF
+# checks on every POST for a browser where an administrator is signed in).
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [],
+}
 
 XS_SHARING_ALLOWED_METHODS = ['POST','GET','OPTIONS', 'PUT', 'DELETE']

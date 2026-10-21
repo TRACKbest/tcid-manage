@@ -43,7 +43,7 @@ const TeacherDashboard = () => {
                     <div className='card border-primary'>
                       <h5 className='card-header bg-warning text-white'>Total des formations</h5>
                       <div className='card-body'>
-                        <h3><Link to="/teacher-my-course" className='text-warning'>{dashbarData.total_teacher_course} <i class="bi bi-journals text-warning"></i></Link></h3>
+                        <h3><Link to="/teacher-my-course" className='text-warning'>{dashbarData.total_teacher_course} <i className="bi bi-journals text-warning"></i></Link></h3>
                       </div>
                     </div>
                   </div>
@@ -51,7 +51,7 @@ const TeacherDashboard = () => {
                     <div className='card border-primary'>
                       <h5 className='card-header bg-success text-white'>Total des apprenants</h5>
                       <div className='card-body'>
-                        <h3><Link to="/my-users" className='text-success'>{dashbarData.total_teacher_students} <i class="bi bi-people-fill"></i></Link></h3>
+                        <h3><Link to="/my-users" className='text-success'>{dashbarData.total_teacher_students} <i className="bi bi-people-fill"></i></Link></h3>
                       </div>
                     </div>
                   </div>
@@ -59,7 +59,7 @@ const TeacherDashboard = () => {
                     <div className='card border-primary'>
                       <h5 className='card-header bg-info text-white'>Nombre de chapitres</h5>
                       <div className='card-body'>
-                        <h3><Link to="/teacher-my-course">{dashbarData.total_teacher_chapters} <i class="bi bi-stickies-fill"></i></Link></h3>
+                        <h3><Link to="/teacher-my-course">{dashbarData.total_teacher_chapters} <i className="bi bi-stickies-fill"></i></Link></h3>
                       </div>
                     </div>
                   </div>

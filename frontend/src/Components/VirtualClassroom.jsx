@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react'
 import axios from 'axios'
 import { Link, useParams } from 'react-router-dom'
 import LiveRoom from './LiveRoom'
+import DeviceCheck from './DeviceCheck'
+import { stopStream } from './liveMedia'
 import './LiveClassroom.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
@@ -21,6 +23,8 @@ const VirtualClassroom = () => {
   const [loading, setLoading] = useState(true)
   const [busySessionId, setBusySessionId] = useState(null)
   const [error, setError] = useState('')
+  const [deviceCheck, setDeviceCheck] = useState(null)
+  const [initialStream, setInitialStream] = useState(null)
 
   const loadPage = useCallback(async () => {
     setError('')
@@ -70,7 +74,7 @@ const VirtualClassroom = () => {
     }
   }
 
-  const enterSession = async (classroom, startFirst = false) => {
+  const enterSession = async (classroom, startFirst = false, stream = null) => {
     setBusySessionId(classroom.id)
     setError('')
     try {
@@ -87,12 +91,16 @@ const VirtualClassroom = () => {
       const updatedClassroom = startFirst
         ? { ...classroom, status: 'live' }
         : classroom
+      setInitialStream(stream)
+      setDeviceCheck(null)
       setActiveClassroom(updatedClassroom)
       setJoinInfo(joinResponse.data)
     } catch (requestError) {
+      stopStream(stream)
+      setDeviceCheck(null)
       console.error('Could not join live classroom:', requestError.response?.data || requestError)
-      setError(requestError.response?.data?.detail || 'Impossible de rejoindre cette classe.')
       await loadPage()
+      setError(requestError.response?.data?.detail || 'Impossible de rejoindre cette classe.')
     } finally {
       setBusySessionId(null)
     }
@@ -107,6 +115,7 @@ const VirtualClassroom = () => {
     } catch (requestError) {
       console.error('Could not end live classroom:', requestError.response?.data || requestError)
     }
+    setInitialStream(null)
     setJoinInfo(null)
     setActiveClassroom(null)
     await loadPage()
@@ -117,9 +126,11 @@ const VirtualClassroom = () => {
       <LiveRoom
         classroom={activeClassroom}
         joinInfo={joinInfo}
+        initialStream={initialStream}
         role={isTeacher ? 'teacher' : 'student'}
         participantId={isTeacher ? teacherId : studentId}
         onLeave={() => {
+          setInitialStream(null)
           setJoinInfo(null)
           setActiveClassroom(null)
           loadPage()
@@ -149,6 +160,21 @@ const VirtualClassroom = () => {
       </header>
 
       {error && <div className="live-class-error" role="alert">{error}</div>}
+
+      {deviceCheck && (
+        <DeviceCheck
+          classroom={deviceCheck.classroom}
+          busy={busySessionId === deviceCheck.classroom.id}
+          onCancel={() => setDeviceCheck(null)}
+          onJoin={(stream) => enterSession(deviceCheck.classroom, deviceCheck.startFirst, stream)}
+        />
+      )}
+
+      <ol className="live-class-guide" aria-label="Comment participer">
+        <li><i className="bi bi-1-circle-fill" aria-hidden="true" /><span><strong>{isTeacher ? 'Créez' : 'Attendez'} la session</strong>{isTeacher ? 'Donnez-lui un nom et une date.' : 'Vous êtes notifié quand elle démarre.'}</span></li>
+        <li><i className="bi bi-2-circle-fill" aria-hidden="true" /><span><strong>Testez vos appareils</strong>Caméra, micro et choix du périphérique.</span></li>
+        <li><i className="bi bi-3-circle-fill" aria-hidden="true" /><span><strong>Participez</strong>Vidéo, discussion, tableau blanc et sondages.</span></li>
+      </ol>
 
       {isTeacher && (
         <form className="live-class-create" onSubmit={createSession}>
@@ -224,7 +250,7 @@ const VirtualClassroom = () => {
                 <button
                   className="btn btn-success"
                   disabled={busySessionId === session.id}
-                  onClick={() => enterSession(session, true)}
+                  onClick={() => setDeviceCheck({ classroom: session, startFirst: true })}
                   type="button"
                 >
                   <i className="bi bi-play-fill me-1" aria-hidden="true" />Démarrer
@@ -234,7 +260,7 @@ const VirtualClassroom = () => {
                 <button
                   className="btn btn-dark"
                   disabled={busySessionId === session.id}
-                  onClick={() => enterSession(session)}
+                  onClick={() => setDeviceCheck({ classroom: session, startFirst: false })}
                   type="button"
                 >
                   <i className="bi bi-box-arrow-in-right me-2" aria-hidden="true" />Rejoindre

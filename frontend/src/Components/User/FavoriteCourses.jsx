@@ -34,7 +34,7 @@ const FavoriteCourses = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-heart-fill text-danger"></i> Formations favorites</h5>
+                    <h5 className='card-header'><i className="bi bi-heart-fill text-danger"></i> Formations favorites</h5>
                     <div className='card-body table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>

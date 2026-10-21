@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import './AdminConsole.css'
 import RichTextEditor from './RichTextEditor'
 import confirmLogout from './confirmLogout'
+import AdminPayments from './AdminPayments'
+import { formatAriary } from './format'
 
 const apiBase = process.env.REACT_APP_API_URL || `${window.location.protocol}//${window.location.hostname}:8000/api`
 
@@ -14,7 +16,9 @@ const adminTranslations = {
     teacher: 'Formateurs',
     coursecategory: 'Catégories de formations',
     course: 'Formations',
-    chapter: 'Chapitres de formation',
+    chapter: 'Vidéos des formations',
+    chapterdocument: 'Documents des vidéos',
+    coursepayment: 'Paiements des formations',
     student: 'Apprenants',
     studentcourseenrollment: 'Inscriptions aux formations',
     courserating: 'Avis sur les formations',
@@ -136,6 +140,13 @@ const adminTranslations = {
     options: 'Choix de réponse',
     option_index: 'Numéro du choix',
     created: 'Date de création',
+    price: 'Prix (Ar)',
+    position: 'Ordre',
+    is_free_preview: 'Vidéo gratuite',
+    chapter: 'Vidéo',
+    method: 'Opérateur',
+    amount: 'Montant',
+    reference: 'Référence',
   },
   choices: {
     Pending: 'En attente',
@@ -166,6 +177,11 @@ const adminTranslations = {
     other: 'Autre',
     True: 'Oui',
     False: 'Non',
+    Validated: 'Validé',
+    validated: 'Validé',
+    orange_money: 'Orange Money',
+    airtel_money: 'Airtel Money',
+    mvola: 'MVola',
   },
   errors: {
     'Authentication required.': 'Veuillez vous connecter pour accéder à l’administration.',
@@ -296,7 +312,25 @@ function AdminLogin({ onLogin }) {
   )
 }
 
+function RevenueChart({ months }) {
+  const max = Math.max(1, ...months.map((item) => item.total))
+  if (!months.length) return <p className="admin-frequent-empty">Aucun paiement validé pour le moment.</p>
+  return (
+    <div className="admin-bar-chart" role="img" aria-label="Revenus validés des derniers mois">
+      {months.map((item) => (
+        <div className="admin-bar" key={item.month} title={`${item.month} : ${formatAriary(item.total)} (${item.count} paiement(s))`}>
+          <span className="admin-bar-value">{formatAriary(item.total)}</span>
+          <div className="admin-bar-track"><i style={{ height: `${Math.max(4, Math.round(item.total * 100 / max))}%` }} /></div>
+          <span className="admin-bar-label">{item.month}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function AdminConsole() {
+  const [view, setView] = useState('overview')
+  const [stats, setStats] = useState(null)
   const [user, setUser] = useState(null)
   const [initializing, setInitializing] = useState(true)
   const [resources, setResources] = useState([])
@@ -355,6 +389,7 @@ function AdminConsole() {
         if (cancelled) return
         setResources(data.resources.map(translateResource))
         setFrequentQuestions(data.frequentQuestions || [])
+        setStats(data.stats || null)
       })
       .catch((error) => {
         if (!cancelled) setPageError(error.message)
@@ -414,6 +449,7 @@ function AdminConsole() {
   }, [user, groupPanel, groupFilter, groupCourseId, refreshKey])
 
   const chooseResource = (resource, showPending = false) => {
+    setView(resource ? 'resource' : 'overview')
     setSelectedResource(resource)
     setGroupPanel(null)
     setPendingOnly(showPending)
@@ -426,6 +462,14 @@ function AdminConsole() {
     const data = await adminRequest('resources/')
     setResources(data.resources.map(translateResource))
     setFrequentQuestions(data.frequentQuestions || [])
+    setStats(data.stats || null)
+  }
+
+  const openPayments = () => {
+    setSelectedResource(null)
+    setGroupPanel(null)
+    setNotice('')
+    setView('payments')
   }
 
   const addGroupMembers = async () => {
@@ -552,7 +596,8 @@ function AdminConsole() {
     <div className="admin-console">
       <aside className="admin-sidebar">
         <div className="admin-sidebar-brand"><img className="admin-brand-mark" src="/tcid-center-logo.png" alt="TCiD Center" /><span>Administration</span></div>
-        <button className={`admin-nav-item ${!selectedResource ? 'is-active' : ''}`} onClick={() => chooseResource(null)}><span className="admin-nav-symbol">⌂</span> Vue d’ensemble</button>
+        <button className={`admin-nav-item ${view === 'overview' ? 'is-active' : ''}`} onClick={() => chooseResource(null)}><span><span className="admin-nav-symbol">⌂</span> Tableau de bord</span></button>
+        <button className={`admin-nav-item ${view === 'payments' ? 'is-active' : ''}`} onClick={openPayments}><span><span className="admin-nav-symbol">₳</span> Paiements</span>{stats?.pendingPayments > 0 && <span className="admin-nav-count is-alert">{stats.pendingPayments}</span>}</button>
         <div className="admin-sidebar-scroll">
           {Object.entries(resourcesByApp).map(([appLabel, appResources]) => (
             <section className="admin-nav-group" key={appLabel}>
@@ -577,9 +622,41 @@ function AdminConsole() {
           {notice && <div className="admin-notice" role="status">{notice}<button onClick={() => setNotice('')} aria-label="Fermer">×</button></div>}
           {pageError && <div className="admin-alert" role="alert">{pageError}<button onClick={() => setPageError('')} aria-label="Fermer">×</button></div>}
 
-          {!selectedResource ? (
+          {view === 'payments' ? (
+            <AdminPayments request={adminRequest} onChanged={updateResources} />
+          ) : !selectedResource ? (
             <section className="admin-overview">
-              <div className="admin-page-heading"><div><p className="admin-kicker">ESPACE ADMINISTRATEUR</p><h1>Vue d’ensemble</h1></div><p>{resources.length} modules disponibles</p></div>
+              <div className="admin-page-heading"><div><p className="admin-kicker">ESPACE ADMINISTRATEUR</p><h1>Tableau de bord</h1></div><p>{resources.length} modules · données en temps réel</p></div>
+              {stats && (
+                <>
+                  <div className="admin-kpi-grid">
+                    <button type="button" className={`admin-kpi ${stats.pendingPayments ? 'is-alert' : ''}`} onClick={openPayments}>
+                      <span>Paiements à vérifier</span><strong>{stats.pendingPayments}</strong><small>{stats.pendingPayments ? 'Ouvrir la file de validation →' : 'Tout est à jour'}</small>
+                    </button>
+                    <div className="admin-kpi is-money"><span>Revenus ce mois</span><strong>{formatAriary(stats.revenueThisMonth)}</strong><small>Total : {formatAriary(stats.revenueTotal)}</small></div>
+                    <div className="admin-kpi"><span>Paiements validés</span><strong>{stats.validatedPayments}</strong><small>{stats.paidCourses} formation(s) payante(s)</small></div>
+                    <div className="admin-kpi"><span>Apprenants</span><strong>{stats.students}</strong><small>{stats.approvedEnrollments} inscription(s) active(s)</small></div>
+                    <div className="admin-kpi"><span>Formateurs</span><strong>{stats.teachers}</strong><small>{stats.courses} formation(s)</small></div>
+                    <div className="admin-kpi"><span>Classes en direct</span><strong>{stats.liveNow}</strong><small>{stats.liveNow ? 'Session(s) en cours' : 'Aucune session en cours'}</small></div>
+                  </div>
+                  <div className="admin-overview-columns">
+                    <section className="admin-frequent-questions">
+                      <div className="admin-frequent-heading"><div><p className="admin-kicker">FINANCES</p><h2>Revenus validés par mois</h2></div></div>
+                      <RevenueChart months={stats.revenueByMonth || []} />
+                    </section>
+                    <section className="admin-frequent-questions">
+                      <div className="admin-frequent-heading"><div><p className="admin-kicker">CLASSEMENT</p><h2>Formations les plus vendues</h2></div></div>
+                      {stats.topCourses?.length ? (
+                        <ol className="admin-top-list">
+                          {stats.topCourses.map((item) => (
+                            <li key={item.course__title}><span><strong>{item.course__title}</strong><small>{item.course__teacher__full_name} · {item.count} vente(s)</small></span><b>{formatAriary(item.total)}</b></li>
+                          ))}
+                        </ol>
+                      ) : <p className="admin-frequent-empty">Les ventes apparaîtront ici après la première validation.</p>}
+                    </section>
+                  </div>
+                </>
+              )}
               <div className="admin-metric-grid">
                 {resources.filter((resource) => resource.pendingCount > 0).map((resource) => (
                   <button className="admin-metric" key={resourceKey(resource)} onClick={() => chooseResource(resource, true)}>

@@ -115,7 +115,7 @@ const MyTeachers = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-person-check-fill"/> Mes formateurs</h5>
+                    <h5 className='card-header'><i className="bi bi-person-check-fill"/> Mes formateurs</h5>
                     <div className='card-body  table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>

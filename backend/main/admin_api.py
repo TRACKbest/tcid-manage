@@ -10,7 +10,8 @@ from django.contrib.auth.forms import AdminUserCreationForm, UserChangeForm
 from django.contrib.admin.utils import label_for_field, lookup_field
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q, Sum
+from django.db.models.functions import Coalesce, TruncMonth
 from django.db.models.fields.files import FieldFile
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
@@ -21,7 +22,8 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 from rest_framework.exceptions import ValidationError as SerializerValidationError
 
 from . import models
-from .serializers import StudentAssignmentSerializer
+from .payments import PaymentError, reject_payment, validate_payment
+from .serializers import CoursePaymentSerializer, StudentAssignmentSerializer
 
 HIDDEN_ADMIN_RESOURCES = {('flatpages', 'flatpage')}
 
@@ -374,7 +376,105 @@ def admin_resources(request):
     return JsonResponse({
         'resources': resources,
         'frequentQuestions': _frequent_ai_questions(),
+        'stats': _dashboard_stats(),
     })
+
+
+def _payment_revenue(queryset):
+    return queryset.aggregate(
+        total=Coalesce(Sum(Coalesce('amount_received', 'amount')), 0),
+    )['total']
+
+
+def _dashboard_stats():
+    payments = models.CoursePayment.objects.all()
+    validated = payments.filter(status=models.CoursePayment.STATUS_VALIDATED)
+    month_start = timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly = (
+        validated.annotate(month=TruncMonth('reviewed_at'))
+        .values('month')
+        .annotate(total=Coalesce(Sum(Coalesce('amount_received', 'amount')), 0), count=Count('id'))
+        .order_by('-month')[:6]
+    )
+    return {
+        'students': models.Student.objects.count(),
+        'teachers': models.Teacher.objects.count(),
+        'courses': models.Course.objects.count(),
+        'paidCourses': models.Course.objects.filter(price__gt=0).count(),
+        'approvedEnrollments': models.StudentCourseEnrollment.objects.filter(
+            status=models.StudentCourseEnrollment.STATUS_APPROVED).count(),
+        'liveNow': models.LiveClassroom.objects.filter(status=models.LiveClassroom.STATUS_LIVE).count(),
+        'pendingPayments': payments.filter(status=models.CoursePayment.STATUS_PENDING).count(),
+        'validatedPayments': validated.count(),
+        'revenueTotal': _payment_revenue(validated),
+        'revenueThisMonth': _payment_revenue(validated.filter(reviewed_at__gte=month_start)),
+        'revenueByMonth': [
+            {
+                'month': item['month'].strftime('%m/%Y') if item['month'] else '—',
+                'total': item['total'],
+                'count': item['count'],
+            }
+            for item in reversed(list(monthly))
+        ],
+        'topCourses': list(
+            validated.values('course__title', 'course__teacher__full_name')
+            .annotate(total=Coalesce(Sum(Coalesce('amount_received', 'amount')), 0), count=Count('id'))
+            .order_by('-total')[:5]
+        ),
+    }
+
+
+def _json_payload(request):
+    try:
+        return json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return None
+
+
+@_staff_required
+@require_GET
+def admin_payments(request):
+    status_filter = request.GET.get('status', 'pending')
+    payments = models.CoursePayment.objects.select_related('course__teacher', 'student')
+    if status_filter in dict(models.CoursePayment.STATUS_CHOICES):
+        payments = payments.filter(status=status_filter)
+    course_id = request.GET.get('course_id')
+    if course_id:
+        payments = payments.filter(course_id=course_id)
+    search = request.GET.get('q', '').strip()
+    if search:
+        payments = payments.filter(
+            Q(reference__icontains=search.replace(' ', ''))
+            | Q(student__fullname__icontains=search)
+            | Q(student__email__icontains=search)
+            | Q(course__title__icontains=search)
+            | Q(course__teacher__full_name__icontains=search)
+        )
+    counts = dict(models.CoursePayment.objects.values_list('status').annotate(count=Count('id')))
+    return JsonResponse({
+        'results': CoursePaymentSerializer(payments[:200], many=True).data,
+        'counts': {code: counts.get(code, 0) for code, _ in models.CoursePayment.STATUS_CHOICES},
+        'courses': list(models.Course.objects.filter(price__gt=0).order_by('title').values('id', 'title')),
+    })
+
+
+@_staff_required
+@require_POST
+def admin_payment_action(request, payment_id, action):
+    payload = _json_payload(request)
+    if payload is None:
+        return JsonResponse({'detail': 'La requête est invalide.'}, status=400)
+    get_object_or_404(models.CoursePayment, pk=payment_id)
+    try:
+        if action == 'validate':
+            payment = validate_payment(payment_id, request.user, payload.get('reference'), payload.get('amount_received'))
+        elif action == 'reject':
+            payment = reject_payment(payment_id, request.user, payload.get('note'))
+        else:
+            return JsonResponse({'detail': 'Action inconnue.'}, status=404)
+    except PaymentError as error:
+        return JsonResponse({'detail': str(error)}, status=error.status)
+    return JsonResponse({'payment': CoursePaymentSerializer(payment).data})
 
 
 @_staff_required

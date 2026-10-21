@@ -55,11 +55,11 @@ const AddQuiz = () => {
                 <h3 className='card-header'>Ajouter un questionnaire</h3>
                 <div className='card-body'>
                     <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Titre</label>
+                        <label htmlFor="exampleInputPassword1" className="form-label">Titre</label>
                         <input type="text" onChange={handleChange} name='title' className="form-control"/>
                     </div>
                     <div className="mb-3">
-                        <label for="exampleInputPassword1" className="form-label">Description</label>
+                        <label htmlFor="exampleInputPassword1" className="form-label">Description</label>
                         <textarea onChange={handleChange} name='detail' className='form-control' ></textarea>
                     </div>
                     <button type="submit" onClick={formSubmit} className="btn btn-primary">Enregistrer</button>

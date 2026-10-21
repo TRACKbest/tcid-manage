@@ -63,7 +63,7 @@ const AttemptedStudent = () => {
                                     <button type='button' className='btn btn-primary btn-sm' data-bs-toggle="modal" data-bs-target={`#resultModal${row.id}`}>
                                             Résultat du questionnaire
                                     </button>
-                                    <div className="modal fade" id={`resultModal${row.id}`} tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                    <div className="modal fade" id={`resultModal${row.id}`} tabIndex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                         <QuizResult quiz={row.quiz.id} student={row.student.id}/>
                                     </div>
                                     </td>

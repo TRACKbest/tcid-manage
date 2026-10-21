@@ -69,7 +69,7 @@ const StudentAssignments = () => {
             </aside>
             <section className='col-md-9'>
                 <div className='card'>
-                    <h5 className='card-header'><i class="bi bi-journal-minus"></i> Mes devoirs</h5>
+                    <h5 className='card-header'><i className="bi bi-journal-minus"></i> Mes devoirs</h5>
                     <div className='card-body table-responsive'>
                         <table className='table table-striped table-hover'>
                             <thead>

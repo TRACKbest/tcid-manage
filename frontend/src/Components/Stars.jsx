@@ -6,11 +6,11 @@ const Stars = ({stars}) => {
         return(
             <span key={index}>
                 {stars >= index+1 ? 
-                    <i class="bi bi-star-fill text-warning"></i>
+                    <i className="bi bi-star-fill text-warning"></i>
                 : stars >= number ? 
-                    <i class="bi bi-star-half text-warning  "></i>
+                    <i className="bi bi-star-half text-warning  "></i>
                 : 
-                    <i class="bi bi-star text-warning"></i>
+                    <i className="bi bi-star text-warning"></i>
                 }
             </span>
         );

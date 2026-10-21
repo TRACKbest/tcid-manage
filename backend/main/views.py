@@ -10,11 +10,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics
 from django.contrib.flatpages.models import FlatPage
-from . serializers import TeacherSerializer,TeacherStudentChatSerializer,FlatPageSerializer,FaqSerializer,StudyMaterialSerializer,AttempQuizSerializer,QuestionSerializer,CourseQuizSerializer,QuizSerializer,StudentDashboardSerializer,StudentFavoriteCourseSerializer,StudentAssignmentSerializer,CategorySerializer,CourseSerializer,ChapterSerializer,StudentSerializer,StudentCourseEnrollSerializer,CourseRatingSerializer,TeacherDashboardSerializer,NotificationSerializer,GroupMessageSerializer
+from . serializers import ChapterDocumentSerializer,CoursePaymentSerializer,TeacherSerializer,TeacherStudentChatSerializer,FlatPageSerializer,FaqSerializer,StudyMaterialSerializer,AttempQuizSerializer,QuestionSerializer,CourseQuizSerializer,QuizSerializer,StudentDashboardSerializer,StudentFavoriteCourseSerializer,StudentAssignmentSerializer,CategorySerializer,CourseSerializer,ChapterSerializer,StudentSerializer,StudentCourseEnrollSerializer,CourseRatingSerializer,TeacherDashboardSerializer,NotificationSerializer,GroupMessageSerializer
 from rest_framework import permissions
 from django.db.models import Count, F, Q
 from . import models
-from .ai_services import extract_material_text, summarize_material
+from .accounts import hash_password, verify_password
+from .ai_services import extract_document_text, extract_material_text, summarize_material
+from .payments import PaymentError, has_course_access, payment_methods, submit_payment
 from rest_framework.pagination import PageNumberPagination
 
 logger = logging.getLogger(__name__)
@@ -59,10 +61,10 @@ def teacher_login(request):
     password=request.POST.get('password', '')
     if not email or not password:
         return JsonResponse({'bool': False}, status=400)
-    try:
-        teacherData=models.Teacher.objects.get(email=email,password=password)
-    except models.Teacher.DoesNotExist:
-        teacherData=None
+    teacherData=next(
+        (teacher for teacher in models.Teacher.objects.filter(email__iexact=email) if verify_password(teacher, password)),
+        None,
+    )
     if teacherData and not teacherData.is_approved:
         return JsonResponse({'bool': False, 'status': 'pending_approval'})
     if teacherData and teacherData.is_active:
@@ -142,25 +144,124 @@ class CourseDetailView(generics.RetrieveAPIView):
     queryset=models.Course.objects.all()
     serializer_class=CourseSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['student_id'] = self.request.query_params.get('student_id')
+        return context
+
 class TeacherCourseDetail(generics.RetrieveUpdateDestroyAPIView):
     queryset=models.Course.objects.all()
     serializer_class=CourseSerializer
 
-class ChapterList(generics.ListCreateAPIView):
-    queryset=models.Chapter.objects.all()
-    serializer_class=ChapterSerializer
+def _request_teacher_id(request):
+    return str(request.query_params.get('teacher_id') or request.data.get('teacher_id') or '')
+
+
+def _require_course_teacher(request, course):
+    if not course or str(course.teacher_id) != _request_teacher_id(request):
+        raise PermissionDenied('Seul le formateur de la formation peut modifier son contenu.')
+
+
+def _chapter_context(view, course):
+    context = generics.GenericAPIView.get_serializer_context(view)
+    teacher_id = view.request.query_params.get('teacher_id')
+    context['is_course_teacher'] = bool(course and teacher_id and str(course.teacher_id) == str(teacher_id))
+    context['student_id'] = view.request.query_params.get('student_id')
+    return context
+
 
 class CourseChapterList(generics.ListCreateAPIView):
     serializer_class=ChapterSerializer
 
+    def get_course(self):
+        return get_object_or_404(models.Course, pk=self.kwargs['course_id'])
+
     def get_queryset(self):
-        course_id=self.kwargs['course_id']
-        course=models.Course.objects.get(pk=course_id)
-        return models.Chapter.objects.filter(course=course)
+        return models.Chapter.objects.filter(course=self.get_course()).order_by('position', 'id')
+
+    def get_serializer_context(self):
+        return _chapter_context(self, self.get_course())
+
+    def perform_create(self, serializer):
+        course = self.get_course()
+        _require_course_teacher(self.request, course)
+        position = serializer.validated_data.get('position')
+        if not position:
+            last = course.course_chapters.order_by('-position').values_list('position', flat=True).first() or 0
+            position = last + 1
+        serializer.save(course=course, position=position)
+
 
 class ChapterDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset=models.Chapter.objects.all()
+    queryset=models.Chapter.objects.select_related('course')
     serializer_class=ChapterSerializer
+
+    def get_serializer_context(self):
+        chapter = models.Chapter.objects.select_related('course').filter(pk=self.kwargs.get('pk')).first()
+        return _chapter_context(self, chapter.course if chapter else None)
+
+    def perform_update(self, serializer):
+        _require_course_teacher(self.request, serializer.instance.course)
+        serializer.save(course=serializer.instance.course)
+
+    def perform_destroy(self, instance):
+        _require_course_teacher(self.request, instance.course)
+        instance.delete()
+
+
+class CourseChapterReorder(APIView):
+    def post(self, request, course_id):
+        course = get_object_or_404(models.Course, pk=course_id)
+        _require_course_teacher(request, course)
+        chapter_ids = set(course.course_chapters.values_list('id', flat=True))
+        try:
+            ordered_ids = [int(chapter_id) for chapter_id in request.data.get('chapter_ids') or []]
+        except (TypeError, ValueError):
+            ordered_ids = []
+        if set(ordered_ids) != chapter_ids or len(ordered_ids) != len(chapter_ids):
+            return Response({'detail': 'Envoyez la liste complète des chapitres de la formation.'}, status=400)
+        with transaction.atomic():
+            for position, chapter_id in enumerate(ordered_ids, start=1):
+                models.Chapter.objects.filter(pk=chapter_id).update(position=position)
+        return Response({'chapter_ids': ordered_ids})
+
+
+class ChapterDocumentList(generics.ListCreateAPIView):
+    serializer_class=ChapterDocumentSerializer
+
+    def get_chapter(self):
+        return get_object_or_404(models.Chapter.objects.select_related('course'), pk=self.kwargs['chapter_id'])
+
+    def get_queryset(self):
+        chapter = self.get_chapter()
+        context = _chapter_context(self, chapter.course)
+        if ChapterSerializer(chapter, context=context).data['is_locked']:
+            raise PermissionDenied('Débloquez la formation pour accéder aux documents de ce chapitre.')
+        return chapter.documents.all()
+
+    def perform_create(self, serializer):
+        chapter = self.get_chapter()
+        _require_course_teacher(self.request, chapter.course)
+        position = serializer.validated_data.get('position') or chapter.documents.count() + 1
+        document = serializer.save(chapter=chapter, position=position)
+        document.extracted_text = extract_document_text(document)
+        document.save(update_fields=['extracted_text'])
+
+
+class ChapterDocumentDetail(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class=ChapterDocumentSerializer
+    http_method_names=['get', 'patch', 'delete', 'options']
+
+    def get_queryset(self):
+        teacher_id = _request_teacher_id(self.request)
+        if not teacher_id:
+            return models.ChapterDocument.objects.none()
+        return models.ChapterDocument.objects.filter(chapter__course__teacher_id=teacher_id)
+
+    def perform_update(self, serializer):
+        document = serializer.save()
+        document.extracted_text = extract_document_text(document)
+        document.save(update_fields=['extracted_text'])
 
 class StudentList(generics.ListCreateAPIView):
     queryset=models.Student.objects.all()
@@ -181,10 +282,10 @@ def student_login(request):
     password=request.POST.get('password', '')
     if not email or not password:
         return JsonResponse({'bool': False}, status=400)
-    try:
-        studentData=models.Student.objects.get(email=email,password=password)
-    except models.Student.DoesNotExist:
-        studentData=None
+    studentData=next(
+        (student for student in models.Student.objects.filter(email__iexact=email) if verify_password(student, password)),
+        None,
+    )
     if studentData and not studentData.is_approved:
         return JsonResponse({'bool': False, 'status': 'pending_approval'})
     if studentData and studentData.is_active:
@@ -200,6 +301,8 @@ class StudentEnrollCourseList(generics.ListCreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if serializer.validated_data['course'].is_paid:
+            return Response({'detail': 'Cette formation est payante : envoyez votre paiement pour la débloquer.'}, status=400)
         enrollment, created = models.StudentCourseEnrollment.objects.get_or_create(
             course=serializer.validated_data['course'],
             student=serializer.validated_data['student'],
@@ -231,6 +334,8 @@ def approve_enrollment(request, teacher_id, enrollment_id):
     )
     if enrollment.status != models.StudentCourseEnrollment.STATUS_PENDING:
         return JsonResponse({'status': enrollment.status}, status=200)
+    if enrollment.course.is_paid:
+        return JsonResponse({'detail': 'Formation payante : l’accès est ouvert après validation du paiement par l’administrateur.'}, status=409)
     enrollment.status = models.StudentCourseEnrollment.STATUS_APPROVED
     enrollment.save(update_fields=['status'])
     models.Notification.objects.create(
@@ -249,6 +354,7 @@ def approve_all_enrollments(request, teacher_id):
     with transaction.atomic():
         pending_enrollments = list(models.StudentCourseEnrollment.objects.filter(
             course__teacher_id=teacher_id,
+            course__price=0,
             status=models.StudentCourseEnrollment.STATUS_PENDING,
         ).select_related('student', 'course'))
         for enrollment in pending_enrollments:
@@ -324,7 +430,6 @@ class EnrolledStuentList(generics.ListAPIView):
         elif 'studentId' in self.kwargs:
             student_id=self.kwargs['student_id']
             student=models.Student.objects.get(pk=student_id)
-            print(student.interseted_categories)
             queries=[Q(techs__iendwith=value) for value in student.interseted_categories]
             query=queries.pop()
             for item in queries:
@@ -357,13 +462,15 @@ def fetch_rating_status(request,student_id,course_id):
 
 @csrf_exempt
 def teacher_change_password(request,teacher_id):
-    password=request.POST['password']
+    password=request.POST.get('password', '')
+    if len(password) < 6:
+        return JsonResponse({'bool':False,'detail':'Le mot de passe doit contenir au moins 6 caractères.'}, status=400)
     try:
         teacherData=models.Teacher.objects.get(id=teacher_id)
     except models.Teacher.DoesNotExist:
         teacherData=None
     if teacherData:
-        models.Teacher.objects.filter(id=teacher_id).update(password=password)
+        models.Teacher.objects.filter(id=teacher_id).update(password=hash_password(password))
         return JsonResponse({'bool':True})
     else:
         return JsonResponse({'bool':False})
@@ -443,13 +550,15 @@ class UpdateAssignmentList(generics.RetrieveUpdateDestroyAPIView):
 
 @csrf_exempt
 def student_change_password(request,student_id):
-    password=request.POST['password']
+    password=request.POST.get('password', '')
+    if len(password) < 6:
+        return JsonResponse({'bool':False,'detail':'Le mot de passe doit contenir au moins 6 caractères.'}, status=400)
     try:
         studentData=models.Student.objects.get(id=student_id)
     except models.Student.DoesNotExist:
         studentData=None
     if studentData:
-        models.Student.objects.filter(id=student_id).update(password=password)
+        models.Student.objects.filter(id=student_id).update(password=hash_password(password))
         return JsonResponse({'bool':True})
     else:
         return JsonResponse({'bool':False})
@@ -522,7 +631,6 @@ def fetch_quiz_attempt_status(request,quiz_id,student_id):
     quiz=models.Quiz.objects.filter(id=quiz_id).first()
     student=models.Student.objects.filter(id=student_id).first()
     attemptStatus=models.AttemptQuiz.objects.filter(student=student,question__quiz=quiz).count()
-    print(models.AttemptQuiz.objects.filter(student=student,question__quiz=quiz).query)
     if attemptStatus > 0:
         return JsonResponse({'bool':True})
     else:
@@ -840,3 +948,66 @@ class MyTeacherList(generics.ListAPIView):
             enrolled_courses__student_id=self.kwargs['student_id'],
             enrolled_courses__status=models.StudentCourseEnrollment.STATUS_APPROVED,
         ).select_related('teacher').distinct().order_by('teacher__full_name', 'title')
+
+
+
+class PaymentMethodList(APIView):
+    def get(self, request):
+        return Response(payment_methods())
+
+
+class CoursePaymentListCreate(APIView):
+    def get(self, request, course_id):
+        course = get_object_or_404(models.Course, pk=course_id)
+        student_id = request.query_params.get('student_id')
+        if not student_id:
+            raise PermissionDenied('Connectez-vous avec un compte apprenant.')
+        payments = models.CoursePayment.objects.filter(
+            course=course, student_id=student_id,
+        ).select_related('course__teacher', 'student')
+        return Response({
+            'has_access': has_course_access(student_id, course),
+            'price': course.price,
+            'payments': CoursePaymentSerializer(payments, many=True).data,
+        })
+
+    def post(self, request, course_id):
+        course = get_object_or_404(models.Course, pk=course_id)
+        student = get_object_or_404(models.Student, pk=request.data.get('student_id'), is_active=True, is_approved=True)
+        try:
+            payment = submit_payment(
+                course,
+                student,
+                request.data.get('method'),
+                request.data.get('amount'),
+                request.data.get('reference'),
+                request.data.get('payer_phone', ''),
+            )
+        except PaymentError as error:
+            return Response({'detail': str(error)}, status=error.status)
+        return Response(CoursePaymentSerializer(payment).data, status=201)
+
+
+class StudentPaymentList(generics.ListAPIView):
+    serializer_class=CoursePaymentSerializer
+
+    def get_queryset(self):
+        get_object_or_404(models.Student, pk=self.kwargs['student_id'])
+        return models.CoursePayment.objects.filter(
+            student_id=self.kwargs['student_id'],
+        ).select_related('course__teacher', 'student')
+
+
+class TeacherPaymentList(APIView):
+    def get(self, request, teacher_id):
+        get_object_or_404(models.Teacher, pk=teacher_id)
+        payments = models.CoursePayment.objects.filter(
+            course__teacher_id=teacher_id,
+        ).select_related('course__teacher', 'student')
+        validated = payments.filter(status=models.CoursePayment.STATUS_VALIDATED)
+        return Response({
+            'payments': CoursePaymentSerializer(payments[:200], many=True).data,
+            'validated_count': validated.count(),
+            'pending_count': payments.filter(status=models.CoursePayment.STATUS_PENDING).count(),
+            'revenue': sum(payment.amount_received or payment.amount for payment in validated),
+        })

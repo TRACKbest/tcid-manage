@@ -59,6 +59,8 @@ import AdminConsole from './AdminConsole'
 import VirtualClassroom from './VirtualClassroom'
 import TeacherCourseAIAnalytics from './Teacher/TeacherCourseAIAnalytics'
 import Groups from './Groups'
+import MyPayments from './User/MyPayments'
+import TeacherPayments from './Teacher/TeacherPayments'
 
 const MainRoutes = () => {
   const location = useLocation()
@@ -79,6 +81,8 @@ const MainRoutes = () => {
           <Route path='/user-dashboard' element={<Dashboard />}/>
           <Route path='/my-courses' element={<MyCourses />}/>
           <Route path='/my-teachers' element={<MyTeachers />}/>
+          <Route path='/my-payments' element={<MyPayments />}/>
+          <Route path='/teacher-payments' element={<TeacherPayments />}/>
           <Route path='/favorite-courses' element={<FavoriteCourses />}/>
           <Route path='/recommended-courses' element={<RecomemdedCourses/>}/>
           <Route path='/profile-setting' element={<ProfileSetting/>}/>

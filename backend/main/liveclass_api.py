@@ -1,5 +1,11 @@
+import base64
+import hashlib
+import hmac
+import time
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.conf import settings
 from django.core import signing
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
@@ -31,6 +37,20 @@ def _broadcast(classroom_id, payload):
             f'live_classroom_{classroom_id}',
             {'type': 'room.event', 'payload': payload},
         )
+
+
+def ice_servers(participant_label):
+    """STUN + time-limited TURN credentials (coturn ``use-auth-secret``)."""
+    servers = [{'urls': settings.STUN_URLS}] if settings.STUN_URLS else []
+    if settings.TURN_URLS and settings.TURN_SECRET:
+        username = f'{int(time.time()) + settings.TURN_CREDENTIAL_TTL}:{participant_label}'
+        digest = hmac.new(settings.TURN_SECRET.encode(), username.encode(), hashlib.sha1).digest()
+        servers.append({
+            'urls': settings.TURN_URLS,
+            'username': username,
+            'credential': base64.b64encode(digest).decode(),
+        })
+    return servers
 
 
 def _poll_payload(poll):
@@ -170,7 +190,12 @@ class LiveClassroomJoin(APIView):
             salt=TOKEN_SALT,
             compress=True,
         )
-        return Response({'token': token, 'role': role, 'display_name': display_name})
+        return Response({
+            'token': token,
+            'role': role,
+            'display_name': display_name,
+            'ice_servers': ice_servers(f'{role}-{participant_id}'),
+        })
 
 
 class LiveClassPollListCreate(APIView):

@@ -106,45 +106,45 @@ const Register = () => {
 
   return (
     <>
-    <div class="container">
-    <div class="row">
-      <div class="col-sm-9 col-md-7 col-lg-5 mx-auto">
-        <div class="card border-0 shadow rounded-3 my-5">
-          <div class="card-body p-4 p-sm-5">
-          <div class="text-center wow fadeInUp">
-          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION APPRENANT</h5>
+    <div className="container">
+    <div className="row">
+      <div className="col-sm-9 col-md-7 col-lg-5 mx-auto">
+        <div className="card border-0 shadow rounded-3 my-5">
+          <div className="card-body p-4 p-sm-5">
+          <div className="text-center wow fadeInUp">
+          <h5 className="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION APPRENANT</h5>
           </div>            
             {studentData.status === 'success' && <h3 className='text-center text-success mb-3'>Demande envoyée. Votre compte sera activé après validation par l’administrateur.</h3>}
             {studentData.status === 'error' && <p className='text-center text-danger mb-3' role="alert">{registrationError}</p>}
-              <div class="form-floating mb-3">
-                <input type="text" onChange={handleChange} name='fullname' class="form-control" id="floatingInput" placeholder="Nom complet" />
-                <label for="floatingInput">Nom complet</label>
+              <div className="form-floating mb-3">
+                <input type="text" onChange={handleChange} name='fullname' className="form-control" id="floatingInput" placeholder="Nom complet" />
+                <label htmlFor="floatingInput">Nom complet</label>
               </div>
-              <div class="form-floating mb-3">
-                <input type="email" onChange={handleChange} name='email' class="form-control" id="floatingInput" placeholder="name@example.com"/>
-                <label for="floatingInput">Adresse e-mail</label>
+              <div className="form-floating mb-3">
+                <input type="email" onChange={handleChange} name='email' className="form-control" id="floatingInput" placeholder="name@example.com"/>
+                <label htmlFor="floatingInput">Adresse e-mail</label>
               </div>
-              <div class="form-floating mb-3">
-                <input type="text" onChange={handleChange} name='username' class="form-control" id="floatingInput" placeholder="Nom d’utilisateur"/>
-                <label for="floatingInput">Nom d’utilisateur</label>
+              <div className="form-floating mb-3">
+                <input type="text" onChange={handleChange} name='username' className="form-control" id="floatingInput" placeholder="Nom d’utilisateur"/>
+                <label htmlFor="floatingInput">Nom d’utilisateur</label>
               </div>
-              <div class="form-floating mb-3">
-                <input name='password' type="password" onChange={handleChange} class="form-control" id="floatingPassword" placeholder="Mot de passe"/>
-                <label for="floatingPassword">Mot de passe</label>
+              <div className="form-floating mb-3">
+                <input name='password' type="password" onChange={handleChange} className="form-control" id="floatingPassword" placeholder="Mot de passe"/>
+                <label htmlFor="floatingPassword">Mot de passe</label>
               </div>
-              <div class="form-floating mb-3">
-                <textarea type="text" onChange={handleChange} name='interseted_categories' class="form-control" id="floatingInput" placeholder="Vos centres d’intérêt"></textarea>
-                <label for="floatingInput">Centres d’intérêt</label>
+              <div className="form-floating mb-3">
+                <textarea type="text" onChange={handleChange} name='interseted_categories' className="form-control" id="floatingInput" placeholder="Vos centres d’intérêt"></textarea>
+                <label htmlFor="floatingInput">Centres d’intérêt</label>
                 <div id="emailHelp" className="form-text">Ex. : programmation, développement web, mathématiques…</div>
               </div>
               <div className="mb-3">
                 <label htmlFor="student-profile-image" className="form-label">Photo de profil (facultative)</label>
                 <input id="student-profile-image" type="file" accept="image/*" onChange={handleFileChange} className="form-control" />
               </div>
-              <div class="d-grid my-4">
-                <button onClick={submitForm} class="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="button" disabled={submitting}>{submitting ? 'Envoi en cours…' : 'Créer mon compte'}</button>
+              <div className="d-grid my-4">
+                <button onClick={submitForm} className="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="button" disabled={submitting}>{submitting ? 'Envoi en cours…' : 'Créer mon compte'}</button>
                 <hr className=''/>
-                <Link to='/user-login' class="btn btn-danger rounded-pill btn-login text-uppercase fw-bold">Déjà inscrit·e ? Connexion</Link>
+                <Link to='/user-login' className="btn btn-danger rounded-pill btn-login text-uppercase fw-bold">Déjà inscrit·e ? Connexion</Link>
               </div>
           </div>
         </div>

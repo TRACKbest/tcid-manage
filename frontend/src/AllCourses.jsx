@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import axios from 'axios'
+import PriceTag from './Components/PriceTag'
 
 const baseUrl = `${process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'}/course/`
 
@@ -47,16 +48,17 @@ const AllCourses = () => {
 
   return (
     <div className='container mt-4'>
-    <div class="text-center wow fadeInUp">
-                <h6 class="section-title bg-white text-center text-primary px-3">Formations</h6>
-                <h1 class="mb-5">Toutes les formations</h1>
+    <div className="text-center wow fadeInUp">
+                <h6 className="section-title bg-white text-center text-primary px-3">Formations</h6>
+                <h1 className="mb-5">Toutes les formations</h1>
     </div>    <div className='row mb-4'>
       {courseData && courseData.map((course,index) =>
-      <div className='col-md-3 mb-4'>
+      <div className='col-md-3 mb-4' key={course.id}>
         <div className="card">
           <Link to={`/detail/${course.id}`}><img src={course.featured_img} height={200}  className="card-img-top" alt={course.title} /></Link>
           <div className="card-body">
             <h5 className="card-title"><Link to={`/detail/${course.id}`}>{course.title}</Link></h5>
+            <PriceTag course={course} />
           </div>
         </div>
       </div>

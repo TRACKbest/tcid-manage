@@ -114,49 +114,49 @@ const TeacherRegister = () => {
     }
     
  return (
-    <div class="container">
-    <div class="row">
-      <div class="col-sm-9 col-md-7 col-lg-5 mx-auto">
-        <div class="card border-0 shadow rounded-3 my-5">
-          <div class="card-body p-4 p-sm-5">
-          <div class="text-center wow fadeInUp">
-          <h5 class="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION FORMATEUR</h5>
+    <div className="container">
+    <div className="row">
+      <div className="col-sm-9 col-md-7 col-lg-5 mx-auto">
+        <div className="card border-0 shadow rounded-3 my-5">
+          <div className="card-body p-4 p-sm-5">
+          <div className="text-center wow fadeInUp">
+          <h5 className="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION FORMATEUR</h5>
           </div>            
             {teacherData.status === 'success' && <h3 className='text-center text-success mb-3'>Demande envoyée. Votre compte sera activé après validation par l’administrateur.</h3>}
             {teacherData.status === 'error' && <p className='text-center text-danger mb-3' role="alert">{registrationError}</p>}
-              <div class="form-floating mb-3">
-                <input type="text" onChange={handleChange} name='full_name' class="form-control" id="floatingInput" placeholder="Nom complet" />
-                <label for="floatingInput">Nom complet</label>
+              <div className="form-floating mb-3">
+                <input type="text" onChange={handleChange} name='full_name' className="form-control" id="floatingInput" placeholder="Nom complet" />
+                <label htmlFor="floatingInput">Nom complet</label>
               </div>
-              <div class="form-floating mb-3">
-                <input type="email" onChange={handleChange} name='email' class="form-control" id="floatingInput" placeholder="name@example.com"/>
-                <label for="floatingInput">Adresse e-mail</label>
+              <div className="form-floating mb-3">
+                <input type="email" onChange={handleChange} name='email' className="form-control" id="floatingInput" placeholder="name@example.com"/>
+                <label htmlFor="floatingInput">Adresse e-mail</label>
               </div>
-              <div class="form-floating mb-3">
-                <input name='password' type="password" onChange={handleChange} class="form-control" id="floatingPassword" placeholder="Mot de passe"/>
-                <label for="floatingPassword">Mot de passe</label>
+              <div className="form-floating mb-3">
+                <input name='password' type="password" onChange={handleChange} className="form-control" id="floatingPassword" placeholder="Mot de passe"/>
+                <label htmlFor="floatingPassword">Mot de passe</label>
               </div>
-              <div class="form-floating mb-3">
-                <input type="text" onChange={handleChange} name='qualification' class="form-control" id="floatingInput" placeholder="Diplômes et qualifications"/>
-                <label for="floatingInput">Diplômes et qualifications</label>
+              <div className="form-floating mb-3">
+                <input type="text" onChange={handleChange} name='qualification' className="form-control" id="floatingInput" placeholder="Diplômes et qualifications"/>
+                <label htmlFor="floatingInput">Diplômes et qualifications</label>
               </div>
-              <div class="form-floating mb-3">
-                <input type="tel" onChange={handleChange} name='mobile_no' class="form-control" id="floatingInput" placeholder="Téléphone"/>
-                <label for="floatingInput">Téléphone</label>
+              <div className="form-floating mb-3">
+                <input type="tel" onChange={handleChange} name='mobile_no' className="form-control" id="floatingInput" placeholder="Téléphone"/>
+                <label htmlFor="floatingInput">Téléphone</label>
               </div>
-              <div class="form-floating mb-3">
-                <textarea type="text" onChange={handleChange} name='skills' class="form-control" id="floatingInput" placeholder="Vos domaines d’expertise"></textarea>
-                <label for="floatingInput">Compétences</label>
+              <div className="form-floating mb-3">
+                <textarea type="text" onChange={handleChange} name='skills' className="form-control" id="floatingInput" placeholder="Vos domaines d’expertise"></textarea>
+                <label htmlFor="floatingInput">Compétences</label>
                 <div id="emailHelp" className="form-text">Ex. : programmation, développement web, mathématiques…</div>
               </div>
               <div className="mb-3">
                 <label htmlFor="teacher-profile-image" className="form-label">Photo de profil (facultative)</label>
                 <input id="teacher-profile-image" type="file" accept="image/*" onChange={handleFileChange} className="form-control" />
               </div>
-              <div class="d-grid my-4">
-                <button onClick={submitForm} class="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="button" disabled={submitting}>{submitting ? 'Envoi en cours…' : 'Créer mon compte'}</button>
+              <div className="d-grid my-4">
+                <button onClick={submitForm} className="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="button" disabled={submitting}>{submitting ? 'Envoi en cours…' : 'Créer mon compte'}</button>
                 <hr className=''/>
-                <Link to='/teacher-login' class="btn btn-danger rounded-pill btn-login text-uppercase fw-bold">Déjà inscrit·e ? Connexion</Link>
+                <Link to='/teacher-login' className="btn btn-danger rounded-pill btn-login text-uppercase fw-bold">Déjà inscrit·e ? Connexion</Link>
               </div>
           </div>
         </div>
