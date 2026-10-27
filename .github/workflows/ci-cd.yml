@@ -140,13 +140,15 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           OPENAI_MAX_TOKENS: ${{ secrets.OPENAI_MAX_TOKENS }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           password: ${{ secrets.VPS_PASSWORD }}
           fingerprint: ${{ secrets.VPS_FINGERPRINT }}
-          envs: GITHUB_SHA,VPS_HOST,VPS_DOMAIN,OPENAI_API_KEY,OPENAI_MODEL,OPENAI_MAX_TOKENS
+          envs: GITHUB_SHA,VPS_HOST,VPS_DOMAIN,OPENAI_API_KEY,OPENAI_MODEL,OPENAI_MAX_TOKENS,GOOGLE_OAUTH_CLIENT_ID,GOOGLE_OAUTH_CLIENT_SECRET
           script: |
             set -eu
             DEPLOY_ROOT=/var/www/tcid-manage
@@ -175,6 +177,9 @@ jobs:
             ensure_env POSTGRES_PASSWORD "$(openssl rand -hex 32)"
             ensure_env REACT_ADMIN_URL /admin
             ensure_env TURN_SECRET "$(openssl rand -hex 32)"
+            ensure_env JITSI_JWT_SECRET "$(openssl rand -hex 32)"
+            ensure_env JICOFO_AUTH_PASSWORD "$(openssl rand -hex 24)"
+            ensure_env JVB_AUTH_PASSWORD "$(openssl rand -hex 24)"
 
             update_env() {
               name="$1"
@@ -186,8 +191,13 @@ jobs:
             update_env VPS_DOMAIN "$VPS_DOMAIN"
             update_env DJANGO_ALLOWED_HOSTS "$VPS_HOST,$VPS_DOMAIN,www.$VPS_DOMAIN,localhost,127.0.0.1"
             update_env REACT_FRONTEND_ORIGINS "http://$VPS_HOST,https://$VPS_HOST,https://$VPS_DOMAIN,https://www.$VPS_DOMAIN"
-            # TURN must target the VPS directly (Cloudflare does not proxy port 3478).
-            update_env TURN_URLS "turn:$VPS_HOST:3478?transport=udp,turn:$VPS_HOST:3478?transport=tcp"
+            # Media (Jitsi videobridge 10000/udp, TURN 3478) must reach the VPS
+            # IP directly: Cloudflare does not proxy these ports.
+            update_env JVB_ADVERTISE_IPS "$(getent ahostsv4 "$VPS_HOST" | awk 'NR==1{print $1}')"
+            update_env JITSI_DOMAIN "meet.$VPS_DOMAIN"
+            update_env GOOGLE_OAUTH_CLIENT_ID "${GOOGLE_OAUTH_CLIENT_ID:-}"
+            update_env GOOGLE_OAUTH_CLIENT_SECRET "${GOOGLE_OAUTH_CLIENT_SECRET:-}"
+            update_env GOOGLE_OAUTH_REDIRECT_URI "https://$VPS_DOMAIN/api/auth/callback/google"
             update_env OPENAI_API_KEY "${OPENAI_API_KEY:-}"
             update_env OPENAI_MODEL "${OPENAI_MODEL:-}"
             update_env OPENAI_MAX_TOKENS "${OPENAI_MAX_TOKENS:-}"

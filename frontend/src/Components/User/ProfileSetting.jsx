@@ -91,7 +91,7 @@ const ProfileSetting = () => {
 
     const studentLoginStatus=localStorage.getItem('studentLoginStatus')
     if(studentLoginStatus !== 'true'){
-        window.location.href='/user-login';
+        window.location.href='/user-register?mode=login';
     }
 
   return (

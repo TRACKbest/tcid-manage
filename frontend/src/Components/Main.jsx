@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import About from './About';
 import Login from './User/Login'
 import Register from './User/Register'
+import GoogleAuthComplete from './User/GoogleAuthComplete'
 import Dashboard from './User/Dashboard'
 import MyCourses from './User/MyCourses'
 import FavoriteCourses from './User/FavoriteCourses'
@@ -78,6 +79,7 @@ const MainRoutes = () => {
           <Route path='/teacher-course-ai-analytics/:course_id' element={<TeacherCourseAIAnalytics />}/>
           <Route path='/groups/:group_id?' element={<Groups />}/>
           <Route path='/user-register' element={<Register />}/>
+          <Route path='/auth/google/complete' element={<GoogleAuthComplete />}/>
           <Route path='/user-dashboard' element={<Dashboard />}/>
           <Route path='/my-courses' element={<MyCourses />}/>
           <Route path='/my-teachers' element={<MyTeachers />}/>

@@ -29,19 +29,33 @@ are updated from the GitHub secrets. Optional OpenAI secrets are refreshed
 from GitHub Actions. PostgreSQL, uploaded media, and Caddy's HTTPS certificates
 persist in Docker volumes across deployments.
 
-## Virtual classroom relay (TURN)
+## Virtual classroom (Jitsi Meet SFU)
 
-Cameras and microphones of remote participants (mobile networks, company or
-home routers) need a TURN relay. The stack runs `coturn` with
-`network_mode: host`; the deployment generates `TURN_SECRET` once and sets
-`TURN_URLS` to `turn:$VPS_HOST:3478` (UDP and TCP). Open these ports in the
-VPS firewall, otherwise remote users will still see a black tile:
+The classroom video runs on a self-hosted Jitsi Meet stack (`jitsi-web`,
+`jitsi-prosody`, `jitsi-jicofo`, `jitsi-jvb`) served at
+`https://meet.<VPS_DOMAIN>`. Each participant receives a short-lived JWT from
+the backend (`/api/live-classrooms/<id>/join/`): trainers join as moderators,
+learners as members, and nobody can enter a room without a token.
 
-- `3478/udp` and `3478/tcp`
-- `49160-49200/udp` (relayed media)
+Before the first deployment:
 
-With `ufw`: `sudo ufw allow 3478 && sudo ufw allow 49160:49200/udp`.
-Do not proxy the TURN host through Cloudflare (it does not relay port 3478).
+- DNS: add an `A` record `meet` → the VPS IP (same as the main domain).
+- Firewall: open `10000/udp` (Jitsi media) plus the TURN ports
+  `3478/tcp+udp` and `49160-49200/udp` (fallback when UDP 10000 is blocked).
+  With `ufw`: `sudo ufw allow 10000/udp && sudo ufw allow 3478 && sudo ufw allow 49160:49200/udp`.
+- The deployment generates `JITSI_JWT_SECRET`, `JICOFO_AUTH_PASSWORD`,
+  `JVB_AUTH_PASSWORD` and `TURN_SECRET` once, and sets `JVB_ADVERTISE_IPS`
+  from `VPS_HOST`. Jitsi needs about 4 GB of RAM.
+
+## Google sign-in for learners
+
+Learners sign in or sign up on `/user-register` (the old `/user-login`
+redirects there), by e-mail or with Google. In Google Cloud Console the OAuth
+client must list `https://<VPS_DOMAIN>/api/auth/callback/google` as an
+authorized redirect URI. Add the GitHub secret `GOOGLE_OAUTH_CLIENT_SECRET`
+(and optionally `GOOGLE_OAUTH_CLIENT_ID`); the button stays hidden until the
+secret is set. New Google accounts wait for administrator approval unless
+`GOOGLE_AUTO_APPROVE_STUDENTS=True` is set in the VPS `.env`.
 
 ## Mobile money payments
 

@@ -1122,3 +1122,60 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Jitsi (SFU) stage */
+.live-jitsi-stage {
+  position: relative;
+  overflow: hidden;
+  height: min(72vh, 760px);
+  min-height: 420px;
+  border-radius: 16px;
+  background: #0c1716;
+  box-shadow: 0 14px 34px rgba(12, 23, 22, 0.25);
+}
+
+.live-jitsi-frame,
+.live-jitsi-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.live-jitsi-message {
+  display: grid;
+  height: 100%;
+  padding: 2rem;
+  gap: 0.75rem;
+  place-content: center;
+  justify-items: center;
+  color: #e8f1ee;
+  text-align: center;
+}
+
+.live-jitsi-message i {
+  font-size: 2.4rem;
+}
+
+.live-jitsi-status {
+  margin: 0.6rem 0 1rem;
+  color: var(--live-muted);
+  font-size: 0.85rem;
+}
+
+.live-help-panel ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--live-muted);
+  font-size: 0.85rem;
+}
+
+.live-help-panel li + li {
+  margin-top: 0.35rem;
+}
+
+@media (max-width: 767px) {
+  .live-jitsi-stage {
+    height: 78vh;
+    min-height: 360px;
+  }
+}

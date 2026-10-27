@@ -102,7 +102,7 @@ class ChapterAccessTests(PaidCourseFixture):
 
     def test_teacher_adds_several_documents_to_a_chapter(self):
         url = f'/api/chapter/{self.second.pk}/documents/?teacher_id={self.teacher.pk}'
-        for name in ('cours.pdf', 'annexe.docx'):
+        for name in ('cours.txt', 'annexe.docx'):
             response = self.client.post(url, {
                 'title': name,
                 'description': '<ul><li>Point 1</li></ul>',
@@ -224,17 +224,40 @@ class PasswordSecurityTests(TestCase):
         self.assertTrue(teacher.password.startswith('pbkdf2_'))
 
 
-@override_settings(TURN_URLS=['turn:203.0.113.5:3478?transport=udp'], TURN_SECRET='secret')
-class LiveIceServerTests(PaidCourseFixture):
-    def test_join_returns_turn_credentials_for_remote_participants(self):
+@override_settings(JITSI_DOMAIN='meet.example.com', JITSI_JWT_SECRET='jitsi-secret-for-tests-0123456789abcdef')
+class LiveJitsiTokenTests(PaidCourseFixture):
+    def join(self, **identity):
         from .models import LiveClassroom
-        classroom = LiveClassroom.objects.create(course=self.course, title='Live', status=LiveClassroom.STATUS_LIVE)
-        response = self.client.post(f'/api/live-classrooms/{classroom.pk}/join/', {'teacher_id': self.teacher.pk}, format='json')
+        classroom, _ = LiveClassroom.objects.get_or_create(
+            course=self.course, title='Live', defaults={'status': LiveClassroom.STATUS_LIVE})
+        return self.client.post(f'/api/live-classrooms/{classroom.pk}/join/', identity, format='json')
+
+    def test_teacher_token_is_moderator_and_bound_to_the_room(self):
+        import jwt
+        response = self.join(teacher_id=self.teacher.pk)
 
         self.assertEqual(response.status_code, 200)
-        turn = [server for server in response.data['ice_servers'] if 'credential' in server]
-        self.assertEqual(turn[0]['urls'], ['turn:203.0.113.5:3478?transport=udp'])
-        self.assertTrue(turn[0]['username'].endswith(f':teacher-{self.teacher.pk}'))
+        config = response.data['jitsi']
+        self.assertEqual(config['domain'], 'meet.example.com')
+        claims = jwt.decode(config['jwt'], 'jitsi-secret-for-tests-0123456789abcdef', algorithms=['HS256'], audience='jitsi')
+        self.assertEqual(claims['room'], config['room'])
+        self.assertEqual(claims['iss'], 'tcid-center')
+        self.assertTrue(claims['context']['user']['moderator'])
+        self.assertEqual(claims['context']['user']['affiliation'], 'owner')
+
+    def test_paid_student_gets_member_token_and_unpaid_student_is_refused(self):
+        import jwt
+        self.assertEqual(self.join(student_id=self.student.pk).status_code, 403)
+        StudentCourseEnrollment.objects.create(course=self.course, student=self.student, status='approved')
+        response = self.join(student_id=self.student.pk)
+        claims = jwt.decode(response.data['jitsi']['jwt'], 'jitsi-secret-for-tests-0123456789abcdef', algorithms=['HS256'], audience='jitsi')
+        self.assertFalse(claims['context']['user']['moderator'])
+        self.assertEqual(claims['context']['user']['affiliation'], 'member')
+
+    @override_settings(JITSI_DOMAIN='')
+    def test_join_reports_missing_jitsi_configuration(self):
+        response = self.join(teacher_id=self.teacher.pk)
+        self.assertIsNone(response.data['jitsi'])
 
 
 class AdminSessionDoesNotBreakPublicApiTests(PaidCourseFixture):
@@ -245,3 +268,57 @@ class AdminSessionDoesNotBreakPublicApiTests(PaidCourseFixture):
             'student_id': self.student.pk, 'method': 'mvola', 'amount': 25000, 'reference': '77778888',
         }, format='json')
         self.assertEqual(response.status_code, 201, response.content)
+
+
+@override_settings(GOOGLE_OAUTH_CLIENT_ID='client-id', GOOGLE_OAUTH_CLIENT_SECRET='client-secret',
+                   GOOGLE_OAUTH_REDIRECT_URI='https://tcid.test/api/auth/callback/google')
+class GoogleSignInTests(TestCase):
+    def start(self, client):
+        from urllib.parse import parse_qs, urlparse
+        response = client.get('/api/auth/google/start/', {'next': '/detail/3'})
+        self.assertEqual(response.status_code, 302)
+        query = parse_qs(urlparse(response['Location']).query)
+        self.assertEqual(query['redirect_uri'], ['https://tcid.test/api/auth/callback/google'])
+        return query['state'][0]
+
+    def callback(self, client, state, profile):
+        from unittest.mock import patch
+        with patch('main.google_auth._exchange_code', return_value='access'), \
+                patch('main.google_auth._fetch_userinfo', return_value=profile):
+            return client.get('/api/auth/callback/google', {'code': 'abc', 'state': state})
+
+    def test_existing_approved_learner_signs_in_and_gets_their_id(self):
+        from urllib.parse import parse_qs, urlparse
+        student = Student.objects.create(fullname='Grace', email='grace@example.com', username='grace',
+                                         interseted_categories='', is_active=True, is_approved=True)
+        client = APIClient()
+        response = self.callback(client, self.start(client), {'email': 'Grace@Example.com', 'email_verified': True})
+
+        self.assertEqual(response.status_code, 302)
+        fragment = parse_qs(urlparse(response['Location']).fragment)
+        self.assertTrue(response['Location'].startswith('/auth/google/complete#'))
+        self.assertEqual(fragment['next'], ['/detail/3'])
+        exchange = client.post('/api/auth/google/exchange/', {'token': fragment['token'][0]}, format='json')
+        self.assertEqual(exchange.data['student_id'], student.pk)
+
+    def test_new_google_learner_waits_for_admin_approval(self):
+        client = APIClient()
+        response = self.callback(client, self.start(client), {'email': 'new@example.com', 'email_verified': True, 'name': 'Rasoa'})
+
+        self.assertEqual(response['Location'], '/user-register?google=pending')
+        student = Student.objects.get(email='new@example.com')
+        self.assertFalse(student.is_approved)
+        self.assertEqual(student.fullname, 'Rasoa')
+
+    def test_state_without_matching_cookie_is_rejected(self):
+        client = APIClient()
+        state = self.start(client)
+        response = self.callback(APIClient(), state, {'email': 'x@example.com', 'email_verified': True})
+        self.assertEqual(response['Location'], '/user-register?google=expired')
+        self.assertFalse(Student.objects.filter(email='x@example.com').exists())
+
+    def test_unverified_email_and_forged_exchange_token_are_refused(self):
+        client = APIClient()
+        response = self.callback(client, self.start(client), {'email': 'y@example.com', 'email_verified': False})
+        self.assertEqual(response['Location'], '/user-register?google=unverified')
+        self.assertEqual(client.post('/api/auth/google/exchange/', {'token': 'forged'}, format='json').status_code, 400)

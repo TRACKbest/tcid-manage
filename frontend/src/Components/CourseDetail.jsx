@@ -177,7 +177,7 @@ const CourseDetail = () => {
       return (
         <>
           {firstFreeChapter && <Link className="cx-button cx-button-primary" to={`/mini/${course.id}?chapter=${firstFreeChapter.id}`}><i className="bi bi-play-circle-fill" aria-hidden="true" />Regarder la 1re vidéo gratuite</Link>}
-          <Link className="cx-button cx-button-ghost" to="/user-login"><i className="bi bi-person" aria-hidden="true" />Se connecter pour s’inscrire</Link>
+          <Link className="cx-button cx-button-ghost" to={`/user-register?next=/detail/${course.id}`}><i className="bi bi-person" aria-hidden="true" />Se connecter pour s’inscrire</Link>
         </>
       )
     }

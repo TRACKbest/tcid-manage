@@ -41,19 +41,26 @@ PAYMENT_ACCOUNTS = {
     },
 }
 
-# WebRTC relay (coturn, "use-auth-secret" mode) used by the virtual classroom
-# when peers cannot reach each other directly (mobile networks, strict NAT).
-STUN_URLS = [
-    url.strip()
-    for url in os.environ.get(
-        'STUN_URLS',
-        'stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302,stun:stun.cloudflare.com:3478',
-    ).split(',')
-    if url.strip()
-]
-TURN_URLS = [url.strip() for url in os.environ.get('TURN_URLS', '').split(',') if url.strip()]
-TURN_SECRET = os.environ.get('TURN_SECRET', '')
-TURN_CREDENTIAL_TTL = int(os.environ.get('TURN_CREDENTIAL_TTL', str(8 * 60 * 60)))
+# Virtual classroom: self-hosted Jitsi Meet (SFU). The backend signs a short
+# JWT per participant; Jitsi only admits holders of a valid token.
+JITSI_DOMAIN = os.environ.get('JITSI_DOMAIN', '')
+JITSI_APP_ID = os.environ.get('JITSI_APP_ID', 'tcid-center')
+JITSI_JWT_SECRET = os.environ.get('JITSI_JWT_SECRET', '')
+JITSI_TOKEN_TTL = int(os.environ.get('JITSI_TOKEN_TTL', str(4 * 60 * 60)))
+
+# Google sign-in for learners (OAuth 2.0 authorization code flow).
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get(
+    'GOOGLE_OAUTH_CLIENT_ID',
+    '824299175311-abb0rffd4f6tmgs9o592ook9fkgvid9j.apps.googleusercontent.com',
+)
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', '')
+GOOGLE_OAUTH_REDIRECT_URI = os.environ.get(
+    'GOOGLE_OAUTH_REDIRECT_URI',
+    'https://tcid-madagascar.com/api/auth/callback/google',
+)
+# New Google accounts follow the same rule as the registration form: an
+# administrator approves them unless this is enabled.
+GOOGLE_AUTO_APPROVE_STUDENTS = os.environ.get('GOOGLE_AUTO_APPROVE_STUDENTS', 'False').lower() in {'1', 'true', 'yes'}
 
 
 # Quick-start development settings - unsuitable for production

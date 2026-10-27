@@ -101,7 +101,7 @@ const MiniVideoPlayer = () => {
       return <Link className="cx-button cx-button-primary" to={`/detail/${courseId}`}><i className="bi bi-door-open" aria-hidden="true" />Demander l’accès</Link>
     }
     if (!isStudent) {
-      return <Link className="cx-button cx-button-pay" to="/user-login"><i className="bi bi-person" aria-hidden="true" />Connectez-vous pour débloquer</Link>
+      return <Link className="cx-button cx-button-pay" to={`/user-register?next=/mini/${courseId}`}><i className="bi bi-person" aria-hidden="true" />Connectez-vous pour débloquer</Link>
     }
     if (pendingPayment) {
       return <span className="cx-status cx-status-pending"><i className="bi bi-hourglass-split" aria-hidden="true" /><div><strong>Paiement en vérification</strong><span>Réf. {pendingPayment.reference}</span></div></span>

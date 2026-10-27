@@ -134,25 +134,24 @@ sequenceDiagram
     end
 ```
 
-## Séquence — classe virtuelle (WebRTC)
+## Séquence — classe virtuelle (Jitsi Meet, SFU)
 
 ```mermaid
 sequenceDiagram
-    participant N as Nouveau participant
-    participant S as Serveur (WebSocket)
-    participant E as Participant déjà présent
-    participant T as Relais TURN (coturn)
+    actor U as Formateur / apprenant
+    participant W as Site (React)
+    participant API as API Django
+    participant J as Jitsi Meet (meet.tcid-madagascar.com)
+    participant B as Videobridge (SFU, 10000/udp)
 
-    N->>N: Test caméra/micro (une seule demande getUserMedia)
-    N->>S: POST /join → jeton + serveurs ICE (STUN + TURN temporaire)
-    N->>S: WebSocket connect
-    S-->>E: participant_joined
-    E->>E: addTransceiver(audio) + addTransceiver(video)
-    E->>S: offer
-    S-->>N: offer
-    N->>N: setRemoteDescription puis replaceTrack(piste locale)
-    N->>S: answer + candidats ICE
-    S-->>E: answer + candidats ICE
-    E-->>N: média direct (P2P) ou via T si NAT / réseau mobile
-    Note over E,N: échec ICE → restartIce automatique ; coupure WebSocket → reconnexion automatique
+    U->>W: Clique « Démarrer » / « Rejoindre »
+    W->>API: POST /live-classrooms/{id}/join/
+    API->>API: Vérifie formateur ou inscription approuvée (paiement validé)
+    API-->>W: jeton WebSocket + {domain, room, jwt signé}
+    W->>J: Iframe Jitsi (prejoin : test caméra/micro)
+    J->>J: Vérifie le JWT (formateur = modérateur, apprenant = membre)
+    U->>B: Envoie sa vidéo une seule fois
+    B-->>U: Redistribue les flux aux autres participants
+    W->>API: WebSocket : tableau blanc, sondages, fin de session
+    Note over U,B: Réseau qui bloque l'UDP → relais TURN (coturn 3478)
 ```

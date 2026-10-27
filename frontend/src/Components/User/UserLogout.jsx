@@ -6,7 +6,7 @@ const UserLogout = () => {
     localStorage.removeItem('teacherLoginStatus')
     localStorage.removeItem('teacherId')
     localStorage.removeItem('activeAccountType')
-    window.location.href='/user-login';
+    window.location.href='/user-register?mode=login';
   return (
     <div>
       

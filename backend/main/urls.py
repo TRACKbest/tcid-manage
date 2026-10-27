@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import liveclass_api
 from . import ai_api
+from . import google_auth
 
 urlpatterns =[
         path('teacher/', views.TeacherList.as_view()),
@@ -21,6 +22,16 @@ urlpatterns =[
         path('student/dashboard/<int:pk>/', views.StudentDashboard.as_view()),
 
         path('student-login',views.student_login),
+
+        path('auth/google/config/', google_auth.GoogleConfigView.as_view()),
+
+        path('auth/google/start/', google_auth.google_start),
+
+        path('auth/callback/google', google_auth.google_callback),
+
+        path('auth/callback/google/', google_auth.google_callback),
+
+        path('auth/google/exchange/', google_auth.GoogleLoginExchangeView.as_view()),
 
         path('student/<int:pk>/',views.StudentDetail.as_view()),
 

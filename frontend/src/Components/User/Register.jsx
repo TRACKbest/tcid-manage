@@ -1,158 +1,173 @@
-import React from 'react'
-import { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import axios from 'axios'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import Swal from 'sweetalert2'
+import { Link, useSearchParams } from 'react-router-dom'
+import GoogleSignInButton from './GoogleSignInButton'
+import './LearnerAuth.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
 
+const googleMessages = {
+  pending: 'Votre compte Google est enregistré. Il sera accessible dès que l’administrateur l’aura validé.',
+  blocked: 'Ce compte apprenant est bloqué. Contactez l’administration.',
+  unverified: 'Votre adresse Google n’est pas vérifiée. Utilisez un autre compte Google.',
+  cancelled: 'Connexion Google annulée.',
+  expired: 'La connexion Google a expiré. Recommencez.',
+  unavailable: 'La connexion Google n’est pas encore activée sur le site.',
+  failed: 'La connexion Google a échoué. Réessayez dans un instant.',
+}
+
+const fieldLabels = {
+  fullname: 'Nom complet',
+  email: 'Adresse e-mail',
+  password: 'Mot de passe',
+  username: 'Nom d’utilisateur',
+  interseted_categories: 'Centres d’intérêt',
+  profile_img: 'Photo de profil',
+  non_field_errors: 'Inscription',
+}
+
+const emptyRegistration = { fullname: '', email: '', password: '', username: '', interseted_categories: '' }
+
+const completeStudentLogin = (studentId, next = '/user-dashboard') => {
+  localStorage.removeItem('teacherLoginStatus')
+  localStorage.removeItem('teacherId')
+  localStorage.setItem('activeAccountType', 'student')
+  localStorage.setItem('studentLoginStatus', 'true')
+  localStorage.setItem('studentId', studentId)
+  window.location.assign(next)
+}
+
 const Register = () => {
-    useEffect(()=>{
-        document.title='TCiD Center | Inscription apprenant'
-      })
+  const [searchParams, setSearchParams] = useSearchParams()
+  const mode = searchParams.get('mode') === 'login' ? 'login' : 'register'
+  const googleCode = searchParams.get('google')
+  const next = searchParams.get('next') || '/user-dashboard'
+  const [login, setLogin] = useState({ email: '', password: '' })
+  const [registration, setRegistration] = useState(emptyRegistration)
+  const [profileImage, setProfileImage] = useState(null)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-      useEffect(() => {
-        window.scrollTo(0, 0)
-      }, [])
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
-    const [studentData,setStudentData]=useState({
-        'fullname':'',
-        'email':'',
-        'password':'',
-        'username':'',
-        'interseted_categories':'',
-        'status':''
-    });
-      const [profileImage, setProfileImage] = useState(null)
-      const [registrationError, setRegistrationError] = useState('')
-      const [submitting, setSubmitting] = useState(false)
+  useEffect(() => {
+    document.title = mode === 'login' ? 'TCiD Center | Connexion apprenant' : 'TCiD Center | Inscription apprenant'
+    setError('')
+  }, [mode])
 
-    const handleChange=(event)=>{
-        setStudentData({
-            ...studentData,
-            [event.target.name]:event.target.value
-        });
+  useEffect(() => {
+    if (localStorage.getItem('studentLoginStatus') === 'true') window.location.assign('/user-dashboard')
+  }, [])
+
+  const switchMode = (value) => {
+    const params = new URLSearchParams(searchParams)
+    params.delete('google')
+    if (value === 'login') params.set('mode', 'login')
+    else params.delete('mode')
+    setSearchParams(params, { replace: true })
+  }
+
+  const submitLogin = async (event) => {
+    event.preventDefault()
+    setSubmitting(true)
+    setError('')
+    const formData = new FormData()
+    formData.append('email', login.email)
+    formData.append('password', login.password)
+    try {
+      const response = await axios.post(`${baseUrl}/student-login`, formData)
+      if (response.data.bool === true) {
+        completeStudentLogin(response.data.student_id, next)
+        return
+      }
+      setError(response.data.status === 'pending_approval'
+        ? 'Votre compte est en attente de validation par l’administrateur.'
+        : 'Adresse e-mail ou mot de passe incorrect.')
+    } catch (requestError) {
+      console.error('Student login failed:', requestError.response?.data || requestError)
+      setError('Connexion au serveur impossible. Réessayez dans un instant.')
+    } finally {
+      setSubmitting(false)
     }
+  }
 
-    const handleFileChange = (event) => {
-      setProfileImage(event.target.files[0] || null)
+  const submitRegistration = async (event) => {
+    event.preventDefault()
+    setSubmitting(true)
+    setError('')
+    const formData = new FormData()
+    Object.entries(registration).forEach(([key, value]) => formData.append(key, value))
+    if (profileImage) formData.append('profile_img', profileImage, profileImage.name)
+    try {
+      await axios.post(`${baseUrl}/student/`, formData)
+      setRegistration(emptyRegistration)
+      setProfileImage(null)
+      setSuccess('Demande envoyée ! Votre compte sera accessible après validation par l’administrateur.')
+    } catch (requestError) {
+      const data = requestError.response?.data
+      const messages = Object.entries(data || {}).flatMap(([field, values]) => (Array.isArray(values) ? values : [values])
+        .filter((message) => typeof message === 'string')
+        .map((message) => `${fieldLabels[field] || field} : ${message}`))
+      setError(typeof data?.detail === 'string' ? data.detail : messages.join(' ') || 'Impossible de créer le compte. Réessayez.')
+    } finally {
+      setSubmitting(false)
     }
+  }
 
-    const submitForm=async ()=>{
-        if (submitting) return
-        setSubmitting(true)
-        setRegistrationError('')
-        const studentFormData=new FormData();
-        studentFormData.append("fullname",studentData.fullname)
-        studentFormData.append("email",studentData.email)
-        studentFormData.append("password",studentData.password)
-        studentFormData.append("username",studentData.username)
-        studentFormData.append("interseted_categories",studentData.interseted_categories)
-        if (profileImage) {
-          studentFormData.append('profile_img', profileImage, profileImage.name)
-        }
-
-        try {
-          await axios.post(`${baseUrl}/student/`, studentFormData)
-          setStudentData({
-            fullname: '',
-            email: '',
-            password: '',
-            username: '',
-            interseted_categories: '',
-            status: 'success'
-          })
-          setRegistrationError('')
-          setProfileImage(null)
-          Swal.fire({
-            title: 'Demande envoyée',
-            text: 'Votre compte sera accessible après validation par l’administrateur.',
-            icon: 'success',
-            toast: true,
-            timer: 2000,
-            position: 'top-right',
-            timerProgressBar: true,
-            showConfirmButton: false
-          })
-          window.setTimeout(() => window.location.assign('/user-login'), 2500)
-        } catch (error) {
-          const responseData = error.response?.data
-          const fieldLabels = {
-            fullname: 'Nom complet',
-            email: 'Adresse e-mail',
-            password: 'Mot de passe',
-            username: 'Nom d’utilisateur',
-            interseted_categories: 'Centres d’intérêt',
-            profile_img: 'Photo de profil',
-            non_field_errors: 'Inscription',
-          }
-          const fieldErrors = Object.entries(responseData || {}).flatMap(([field, messages]) => {
-            const values = Array.isArray(messages) ? messages : [messages]
-            return values
-              .filter(message => typeof message === 'string')
-              .map(message => `${fieldLabels[field] || field}: ${message}`)
-          })
-          const message = typeof responseData?.detail === 'string'
-            ? responseData.detail
-            : fieldErrors.join(' ')
-          console.error('Student registration failed:', responseData || error)
-          setRegistrationError(message || 'Impossible de créer le compte. Vérifiez votre connexion et réessayez.')
-          setStudentData(currentData => ({ ...currentData, status: 'error' }))
-        } finally {
-          setSubmitting(false)
-        }
-    }
+  const updateRegistration = (event) => setRegistration((current) => ({ ...current, [event.target.name]: event.target.value }))
 
   return (
-    <>
-    <div className="container">
-    <div className="row">
-      <div className="col-sm-9 col-md-7 col-lg-5 mx-auto">
-        <div className="card border-0 shadow rounded-3 my-5">
-          <div className="card-body p-4 p-sm-5">
-          <div className="text-center wow fadeInUp">
-          <h5 className="card-title text-center mb-3 fw-light fs-5 text-dark ">INSCRIPTION APPRENANT</h5>
-          </div>            
-            {studentData.status === 'success' && <h3 className='text-center text-success mb-3'>Demande envoyée. Votre compte sera activé après validation par l’administrateur.</h3>}
-            {studentData.status === 'error' && <p className='text-center text-danger mb-3' role="alert">{registrationError}</p>}
-              <div className="form-floating mb-3">
-                <input type="text" onChange={handleChange} name='fullname' className="form-control" id="floatingInput" placeholder="Nom complet" />
-                <label htmlFor="floatingInput">Nom complet</label>
-              </div>
-              <div className="form-floating mb-3">
-                <input type="email" onChange={handleChange} name='email' className="form-control" id="floatingInput" placeholder="name@example.com"/>
-                <label htmlFor="floatingInput">Adresse e-mail</label>
-              </div>
-              <div className="form-floating mb-3">
-                <input type="text" onChange={handleChange} name='username' className="form-control" id="floatingInput" placeholder="Nom d’utilisateur"/>
-                <label htmlFor="floatingInput">Nom d’utilisateur</label>
-              </div>
-              <div className="form-floating mb-3">
-                <input name='password' type="password" onChange={handleChange} className="form-control" id="floatingPassword" placeholder="Mot de passe"/>
-                <label htmlFor="floatingPassword">Mot de passe</label>
-              </div>
-              <div className="form-floating mb-3">
-                <textarea type="text" onChange={handleChange} name='interseted_categories' className="form-control" id="floatingInput" placeholder="Vos centres d’intérêt"></textarea>
-                <label htmlFor="floatingInput">Centres d’intérêt</label>
-                <div id="emailHelp" className="form-text">Ex. : programmation, développement web, mathématiques…</div>
-              </div>
-              <div className="mb-3">
-                <label htmlFor="student-profile-image" className="form-label">Photo de profil (facultative)</label>
-                <input id="student-profile-image" type="file" accept="image/*" onChange={handleFileChange} className="form-control" />
-              </div>
-              <div className="d-grid my-4">
-                <button onClick={submitForm} className="btn btn-success rounded-pill btn-login text-uppercase fw-bold" type="button" disabled={submitting}>{submitting ? 'Envoi en cours…' : 'Créer mon compte'}</button>
-                <hr className=''/>
-                <Link to='/user-login' className="btn btn-danger rounded-pill btn-login text-uppercase fw-bold">Déjà inscrit·e ? Connexion</Link>
-              </div>
-          </div>
+    <main className="learner-auth container">
+      <section className="learner-auth-card">
+        <header>
+          <p className="learner-auth-kicker">ESPACE APPRENANT</p>
+          <h1>{mode === 'login' ? 'Bon retour parmi nous' : 'Rejoignez TCiD Center'}</h1>
+          <p>{mode === 'login' ? 'Connectez-vous pour reprendre vos formations.' : 'Créez votre compte en quelques secondes.'}</p>
+        </header>
+
+        {googleCode && googleMessages[googleCode] && (
+          <div className={`learner-auth-alert ${googleCode === 'pending' ? 'is-info' : ''}`} role="status">{googleMessages[googleCode]}</div>
+        )}
+
+        <GoogleSignInButton next={next} />
+        <div className="learner-auth-divider"><span>ou avec votre e-mail</span></div>
+
+        <div className="learner-auth-tabs" role="tablist" aria-label="Connexion ou inscription">
+          <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'is-active' : ''} onClick={() => switchMode('login')}>Se connecter</button>
+          <button type="button" role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'is-active' : ''} onClick={() => switchMode('register')}>Créer un compte</button>
         </div>
-      </div>
-    </div>
-    </div>
-    </>
+
+        {error && <div className="learner-auth-alert" role="alert">{error}</div>}
+        {success && <div className="learner-auth-alert is-success" role="status">{success}</div>}
+
+        {mode === 'login' ? (
+          <form className="learner-auth-form" onSubmit={submitLogin}>
+            <label><span>Adresse e-mail</span><input type="email" autoComplete="email" required value={login.email} onChange={(event) => setLogin({ ...login, email: event.target.value })} placeholder="nom@exemple.com" /></label>
+            <label><span>Mot de passe</span><input type="password" autoComplete="current-password" required value={login.password} onChange={(event) => setLogin({ ...login, password: event.target.value })} /></label>
+            <button className="learner-auth-submit" type="submit" disabled={submitting}>{submitting ? 'Connexion…' : 'Se connecter'}</button>
+          </form>
+        ) : (
+          <form className="learner-auth-form" onSubmit={submitRegistration}>
+            <label><span>Nom complet</span><input name="fullname" autoComplete="name" required value={registration.fullname} onChange={updateRegistration} /></label>
+            <label><span>Adresse e-mail</span><input name="email" type="email" autoComplete="email" required value={registration.email} onChange={updateRegistration} /></label>
+            <div className="learner-auth-row">
+              <label><span>Nom d’utilisateur</span><input name="username" autoComplete="username" required value={registration.username} onChange={updateRegistration} /></label>
+              <label><span>Mot de passe <small>6 caractères min.</small></span><input name="password" type="password" autoComplete="new-password" minLength="6" required value={registration.password} onChange={updateRegistration} /></label>
+            </div>
+            <label><span>Centres d’intérêt</span><input name="interseted_categories" required value={registration.interseted_categories} onChange={updateRegistration} placeholder="Programmation, langues, mathématiques…" /></label>
+            <label><span>Photo de profil <small>(facultative)</small></span><input type="file" accept="image/*" onChange={(event) => setProfileImage(event.target.files?.[0] || null)} /></label>
+            <button className="learner-auth-submit" type="submit" disabled={submitting}>{submitting ? 'Envoi…' : 'Créer mon compte'}</button>
+          </form>
+        )}
+
+        <p className="learner-auth-footer">Vous êtes formateur ? <Link to="/teacher-login">Espace formateur</Link></p>
+      </section>
+    </main>
   )
 }
 
+export { completeStudentLogin }
 export default Register

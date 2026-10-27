@@ -75,7 +75,7 @@ const Header = () => {
         if (response.data.is_active === false) {
           localStorage.removeItem(`${recipientType}Id`)
           localStorage.removeItem(`${recipientType}LoginStatus`)
-          navigate(recipientType === 'teacher' ? '/teacher-login' : '/user-login', { replace: true })
+          navigate(recipientType === 'teacher' ? '/teacher-login' : '/user-register?mode=login', { replace: true })
         }
       } catch (error) {
         console.error('Could not verify account status:', error.response?.data || error)
@@ -172,7 +172,7 @@ const Header = () => {
                     <div className={`dropdown-menu fade-down m-0${openAccountMenu === 'student' ? ' show' : ''}`}>
                     {studentLoginStatus !== 'true' && 
                     <>
-                      <li><Link className="dropdown-item" onClick={closeMenu} to="/user-login"><i className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Connexion</Link></li>
+                      <li><Link className="dropdown-item" onClick={closeMenu} to="/user-register?mode=login"><i className="bi bi-box-arrow-in-right me-2" aria-hidden="true"></i>Connexion</Link></li>
                       <li><Link className="dropdown-item" onClick={closeMenu} to="/user-register"><i className="bi bi-person-plus me-2" aria-hidden="true"></i>Inscription</Link></li>
                     </>
                     }

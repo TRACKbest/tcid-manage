@@ -3,6 +3,11 @@
     reverse_proxy frontend:80
 }
 
+meet.{$VPS_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy jitsi-web:8000
+}
+
 :80 {
     reverse_proxy frontend:80
 }

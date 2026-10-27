@@ -1,8 +1,8 @@
-import base64
 import hashlib
 import hmac
 import time
 
+import jwt
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
@@ -39,18 +39,42 @@ def _broadcast(classroom_id, payload):
         )
 
 
-def ice_servers(participant_label):
-    """STUN + time-limited TURN credentials (coturn ``use-auth-secret``)."""
-    servers = [{'urls': settings.STUN_URLS}] if settings.STUN_URLS else []
-    if settings.TURN_URLS and settings.TURN_SECRET:
-        username = f'{int(time.time()) + settings.TURN_CREDENTIAL_TTL}:{participant_label}'
-        digest = hmac.new(settings.TURN_SECRET.encode(), username.encode(), hashlib.sha1).digest()
-        servers.append({
-            'urls': settings.TURN_URLS,
-            'username': username,
-            'credential': base64.b64encode(digest).decode(),
-        })
-    return servers
+def jitsi_room_name(classroom):
+    """Stable, unguessable Jitsi room name for a classroom."""
+    digest = hmac.new(
+        settings.SECRET_KEY.encode(), f'jitsi-room-{classroom.pk}'.encode(), hashlib.sha256,
+    ).hexdigest()[:12]
+    return f'tcid{classroom.course_id}c{classroom.pk}{digest}'
+
+
+def jitsi_join_config(classroom, role, participant_id, display_name, email=''):
+    if not settings.JITSI_DOMAIN or not settings.JITSI_JWT_SECRET:
+        return None
+    room = jitsi_room_name(classroom)
+    now = int(time.time())
+    is_teacher = role == 'teacher'
+    token = jwt.encode(
+        {
+            'iss': settings.JITSI_APP_ID,
+            'aud': 'jitsi',
+            'sub': '*',
+            'room': room,
+            'nbf': now - 60,
+            'exp': now + settings.JITSI_TOKEN_TTL,
+            'context': {
+                'user': {
+                    'id': f'{role}-{participant_id}',
+                    'name': display_name,
+                    'email': email,
+                    'moderator': is_teacher,
+                    'affiliation': 'owner' if is_teacher else 'member',
+                },
+            },
+        },
+        settings.JITSI_JWT_SECRET,
+        algorithm='HS256',
+    )
+    return {'domain': settings.JITSI_DOMAIN, 'room': room, 'jwt': token}
 
 
 def _poll_payload(poll):
@@ -176,12 +200,12 @@ class LiveClassroomJoin(APIView):
             if str(classroom.course.teacher_id) != str(teacher_id):
                 raise PermissionDenied('Seul le formateur de la formation peut rejoindre avec ce rôle.')
             teacher = get_object_or_404(models.Teacher, pk=teacher_id)
-            role, participant_id, display_name = 'teacher', teacher.pk, teacher.full_name
+            role, participant_id, display_name, email = 'teacher', teacher.pk, teacher.full_name, teacher.email
         elif student_id:
             student = get_object_or_404(models.Student, pk=student_id)
             if not _is_approved_student(student.pk, classroom.course_id):
                 raise PermissionDenied('Une inscription approuvée à la formation est nécessaire.')
-            role, participant_id, display_name = 'student', student.pk, student.fullname
+            role, participant_id, display_name, email = 'student', student.pk, student.fullname, student.email
         else:
             raise PermissionDenied('Une identité de formateur ou d’apprenant est nécessaire.')
 
@@ -194,7 +218,7 @@ class LiveClassroomJoin(APIView):
             'token': token,
             'role': role,
             'display_name': display_name,
-            'ice_servers': ice_servers(f'{role}-{participant_id}'),
+            'jitsi': jitsi_join_config(classroom, role, participant_id, display_name, email),
         })
 
 
