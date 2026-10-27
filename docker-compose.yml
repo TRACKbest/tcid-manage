@@ -109,6 +109,9 @@ services:
       TOOLBAR_BUTTONS: microphone,camera,desktop,chat,raisehand,participants-pane,tileview,settings,fullscreen,select-background,hangup
     volumes:
       - jitsi_web_config:/config
+      # Jitsi lives under /meet/: its relative assets must resolve there,
+      # not at the site root (which is the React app).
+      - ./jitsi/base.html:/usr/share/jitsi-meet/base.html:ro
     expose:
       - "8000"
     networks:

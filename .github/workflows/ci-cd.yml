@@ -246,11 +246,15 @@ jobs:
             echo "jitsi-prosody: $prosody_state"
             jitsi_ok=1
             [ "${prosody_state%% *}" = running ] || jitsi_ok=0
-            for path in meet/config.js meet/external_api.js; do
+            for path in meet/config.js meet/external_api.js meet/libs/app.bundle.min.js; do
               code="$(curl -s -o /dev/null -w '%{http_code}' --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/$path")"
               echo "/$path -> $code"
               [ "$code" = 200 ] || jitsi_ok=0
             done
+            curl -s --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/meet/classe" | grep -q '<base href="/meet/"' || {
+              echo "Jitsi base href is not /meet/" >&2
+              jitsi_ok=0
+            }
             [ "$jitsi_ok" = 1 ] || {
               docker compose -p tcid-manage logs --tail 60 jitsi-prosody jitsi-jicofo jitsi-jvb jitsi-web
               echo "La classe virtuelle (Jitsi) ne répond pas" >&2
