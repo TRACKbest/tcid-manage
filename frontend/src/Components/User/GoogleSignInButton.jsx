@@ -12,7 +12,7 @@ const GoogleLogo = () => (
   </svg>
 )
 
-const GoogleSignInButton = ({ next = '/user-dashboard' }) => {
+const GoogleSignInButton = ({ next = '/user-dashboard', mode = 'login' }) => {
   const [enabled, setEnabled] = useState(null)
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const GoogleSignInButton = ({ next = '/user-dashboard' }) => {
   return (
     <a className={`learner-google-button ${enabled ? '' : 'is-loading'}`} href={href} aria-disabled={!enabled}>
       <GoogleLogo />
-      Continuer avec Google
+      {mode === 'register' ? 'S’inscrire avec Google' : 'Se connecter avec Google'}
     </a>
   )
 }

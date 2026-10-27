@@ -132,13 +132,14 @@ const Register = () => {
           <div className={`learner-auth-alert ${googleCode === 'pending' ? 'is-info' : ''}`} role="status">{googleMessages[googleCode]}</div>
         )}
 
-        <GoogleSignInButton next={next} />
-        <div className="learner-auth-divider"><span>ou avec votre e-mail</span></div>
-
         <div className="learner-auth-tabs" role="tablist" aria-label="Connexion ou inscription">
           <button type="button" role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'is-active' : ''} onClick={() => switchMode('login')}>Se connecter</button>
           <button type="button" role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'is-active' : ''} onClick={() => switchMode('register')}>Créer un compte</button>
         </div>
+
+        <GoogleSignInButton next={next} mode={mode} />
+        <p className="learner-auth-hint">{mode === 'register' ? 'Votre nom et votre e-mail Google sont repris automatiquement.' : 'Un clic, sans mot de passe.'}</p>
+        <div className="learner-auth-divider"><span>{mode === 'register' ? 'ou remplissez le formulaire' : 'ou avec votre e-mail'}</span></div>
 
         {error && <div className="learner-auth-alert" role="alert">{error}</div>}
         {success && <div className="learner-auth-alert is-success" role="status">{success}</div>}

@@ -189,3 +189,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+.learner-auth-hint {
+  margin: -0.4rem 0 0;
+  color: var(--lms-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
