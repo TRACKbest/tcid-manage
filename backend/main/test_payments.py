@@ -273,9 +273,12 @@ class AdminSessionDoesNotBreakPublicApiTests(PaidCourseFixture):
 @override_settings(GOOGLE_OAUTH_CLIENT_ID='client-id', GOOGLE_OAUTH_CLIENT_SECRET='client-secret',
                    GOOGLE_OAUTH_REDIRECT_URI='https://tcid.test/api/auth/callback/google')
 class GoogleSignInTests(TestCase):
-    def start(self, client):
+    def start(self, client, role=None):
         from urllib.parse import parse_qs, urlparse
-        response = client.get('/api/auth/google/start/', {'next': '/detail/3'})
+        params = {'next': '/detail/3'}
+        if role:
+            params['role'] = role
+        response = client.get('/api/auth/google/start/', params)
         self.assertEqual(response.status_code, 302)
         query = parse_qs(urlparse(response['Location']).query)
         self.assertEqual(query['redirect_uri'], ['https://tcid.test/api/auth/callback/google'])
@@ -322,3 +325,27 @@ class GoogleSignInTests(TestCase):
         response = self.callback(client, self.start(client), {'email': 'y@example.com', 'email_verified': False})
         self.assertEqual(response['Location'], '/user-register?google=unverified')
         self.assertEqual(client.post('/api/auth/google/exchange/', {'token': 'forged'}, format='json').status_code, 400)
+
+    def test_existing_approved_trainer_signs_in_and_gets_teacher_id(self):
+        from urllib.parse import parse_qs, urlparse
+        teacher = Teacher.objects.create(full_name='Hery', email='hery@example.com', qualification='', mobile_no='')
+        Student.objects.create(fullname='Same', email='hery@example.com', username='same',
+                               interseted_categories='', is_active=True, is_approved=True)
+        client = APIClient()
+        response = self.callback(client, self.start(client, 'teacher'), {'email': 'hery@example.com', 'email_verified': True})
+
+        fragment = parse_qs(urlparse(response['Location']).fragment)
+        exchange = client.post('/api/auth/google/exchange/', {'token': fragment['token'][0]}, format='json')
+        self.assertEqual(exchange.data['role'], 'teacher')
+        self.assertEqual(exchange.data['teacher_id'], teacher.pk)
+        self.assertNotIn('student_id', exchange.data)
+
+    def test_new_google_trainer_waits_for_approval_on_trainer_page(self):
+        client = APIClient()
+        response = self.callback(client, self.start(client, 'teacher'), {'email': 'prof@example.com', 'email_verified': True, 'name': 'Rakoto'})
+
+        self.assertEqual(response['Location'], '/teacher-login?google=pending')
+        teacher = Teacher.objects.get(email='prof@example.com')
+        self.assertFalse(teacher.is_approved)
+        self.assertEqual(teacher.full_name, 'Rakoto')
+        self.assertFalse(Student.objects.filter(email='prof@example.com').exists())

@@ -4,6 +4,8 @@ import axios from 'axios'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Swal from 'sweetalert2'
+import GoogleSignInButton from '../User/GoogleSignInButton'
+import '../User/LearnerAuth.css'
 
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
@@ -124,6 +126,9 @@ const TeacherRegister = () => {
           </div>            
             {teacherData.status === 'success' && <h3 className='text-center text-success mb-3'>Demande envoyée. Votre compte sera activé après validation par l’administrateur.</h3>}
             {teacherData.status === 'error' && <p className='text-center text-danger mb-3' role="alert">{registrationError}</p>}
+            <GoogleSignInButton role="teacher" mode="register" />
+            <p className="learner-auth-hint mt-2">Votre nom et votre e-mail Google sont repris automatiquement ; l’administrateur valide ensuite votre compte.</p>
+            <div className="learner-auth-divider my-3"><span>ou remplissez le formulaire</span></div>
               <div className="form-floating mb-3">
                 <input type="text" onChange={handleChange} name='full_name' className="form-control" id="floatingInput" placeholder="Nom complet" />
                 <label htmlFor="floatingInput">Nom complet</label>

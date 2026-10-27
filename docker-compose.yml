@@ -134,6 +134,8 @@ services:
     volumes:
       - jitsi_prosody_config:/config
       - jitsi_prosody_plugins:/prosody-plugins-custom
+      # Prosody's data dir must be a volume: the root filesystem is read-only.
+      - jitsi_prosody_data:/var/lib/prosody
     expose:
       - "5222"
       - "5347"
@@ -241,6 +243,7 @@ volumes:
   jitsi_web_config:
   jitsi_prosody_config:
   jitsi_prosody_plugins:
+  jitsi_prosody_data:
   jitsi_jicofo_config:
   jitsi_jvb_config:
 

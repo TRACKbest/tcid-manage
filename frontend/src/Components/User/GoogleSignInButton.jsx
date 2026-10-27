@@ -12,7 +12,7 @@ const GoogleLogo = () => (
   </svg>
 )
 
-const GoogleSignInButton = ({ next = '/user-dashboard', mode = 'login' }) => {
+const GoogleSignInButton = ({ next, mode = 'login', role = 'student' }) => {
   const [enabled, setEnabled] = useState(null)
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const GoogleSignInButton = ({ next = '/user-dashboard', mode = 'login' }) => {
   }, [])
 
   if (enabled === false) return null
-  const href = `${baseUrl}/auth/google/start/?${new URLSearchParams({ next })}`
+  const href = `${baseUrl}/auth/google/start/?${new URLSearchParams({ role, next: next || (role === 'teacher' ? '/teacher-dashboard' : '/user-dashboard') })}`
   return (
     <a className={`learner-google-button ${enabled ? '' : 'is-loading'}`} href={href} aria-disabled={!enabled}>
       <GoogleLogo />

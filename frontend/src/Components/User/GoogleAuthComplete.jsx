@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { Link } from 'react-router-dom'
 import { completeStudentLogin } from './Register'
+import { completeTeacherLogin } from '../Teacher/TeacherLogin'
 import './LearnerAuth.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
@@ -14,13 +15,17 @@ const GoogleAuthComplete = () => {
     const params = new URLSearchParams(window.location.hash.slice(1))
     window.history.replaceState(null, '', window.location.pathname)
     const token = params.get('token')
-    const next = params.get('next') || '/user-dashboard'
+    const requested = params.get('next') || ''
+    const next = requested.startsWith('/') && !requested.startsWith('//') ? requested : ''
     if (!token) {
       setError('Lien de connexion invalide.')
       return
     }
     axios.post(`${baseUrl}/auth/google/exchange/`, { token })
-      .then((response) => completeStudentLogin(response.data.student_id, next.startsWith('/') && !next.startsWith('//') ? next : '/user-dashboard'))
+      .then((response) => {
+        if (response.data.role === 'teacher') completeTeacherLogin(response.data.teacher_id, next || '/teacher-dashboard')
+        else completeStudentLogin(response.data.student_id, next || '/user-dashboard')
+      })
       .catch((requestError) => setError(requestError.response?.data?.detail || 'La connexion Google a échoué.'))
   }, [])
 

@@ -47,10 +47,12 @@ Before the first deployment:
   `JVB_AUTH_PASSWORD` and `TURN_SECRET` once, and sets `JVB_ADVERTISE_IPS`
   from `VPS_HOST`. Jitsi needs about 4 GB of RAM.
 
-## Google sign-in for learners
+## Google sign-in for learners and trainers
 
 Learners sign in or sign up on `/user-register` (the old `/user-login`
-redirects there), by e-mail or with Google. In Google Cloud Console the OAuth
+redirects there), by e-mail or with Google. Trainers get the same Google
+button on `/teacher-login` and `/teacher-register`; a new trainer account
+created with Google always waits for administrator approval. In Google Cloud Console the OAuth
 client must list `https://<VPS_DOMAIN>/api/auth/callback/google` as an
 authorized redirect URI. Add the GitHub secret `GOOGLE_OAUTH_CLIENT_SECRET`
 (and optionally `GOOGLE_OAUTH_CLIENT_ID`); the button stays hidden until the

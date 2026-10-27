@@ -2,13 +2,36 @@ import React from 'react'
 import { useEffect } from 'react'
 import { useState } from 'react'
 import axios from 'axios'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import GoogleSignInButton from '../User/GoogleSignInButton'
+import '../User/LearnerAuth.css'
 
 const baseUrl = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api'
+
+const googleMessages = {
+  pending: 'Votre compte formateur Google est enregistré. Il sera accessible dès que l’administrateur l’aura validé.',
+  blocked: 'Ce compte formateur est bloqué. Contactez l’administration.',
+  unverified: 'Votre adresse Google n’est pas vérifiée. Utilisez un autre compte Google.',
+  cancelled: 'Connexion Google annulée.',
+  expired: 'La connexion Google a expiré. Recommencez.',
+  unavailable: 'La connexion Google n’est pas encore activée sur le site.',
+  failed: 'La connexion Google a échoué. Réessayez dans un instant.',
+}
+
+const completeTeacherLogin = (teacherId, next = '/teacher-dashboard') => {
+  localStorage.removeItem('studentLoginStatus')
+  localStorage.removeItem('studentId')
+  localStorage.setItem('activeAccountType', 'teacher')
+  localStorage.setItem('teacherLoginStatus', 'true')
+  localStorage.setItem('teacherId', teacherId)
+  window.location.assign(next)
+}
 
 const TeacherLogin = () => {
 
     const teacherLoginStatus=localStorage.getItem('teacherLoginStatus');
+    const [searchParams] = useSearchParams()
+    const googleCode = searchParams.get('google')
 
       const [teacherLoginData,setTeacherLoginData]=useState({
         email:'',
@@ -36,12 +59,7 @@ const TeacherLogin = () => {
       try {
         const response = await axios.post(`${baseUrl}/teacher-login`, teacherFormData)
         if (response.data.bool === true) {
-          localStorage.removeItem('studentLoginStatus')
-          localStorage.removeItem('studentId')
-          localStorage.setItem('activeAccountType', 'teacher')
-          localStorage.setItem('teacherLoginStatus', 'true')
-          localStorage.setItem('teacherId', response.data.teacher_id)
-          window.location.assign('/teacher-dashboard')
+          completeTeacherLogin(response.data.teacher_id)
         } else {
           setErrorMsg(response.data.status === 'pending_approval'
             ? 'Votre compte est en attente de validation par l’administrateur.'
@@ -75,6 +93,11 @@ const TeacherLogin = () => {
           <div className="text-center wow fadeInUp">
           <h5 className="card-title text-center mb-3 fw-light fs-5 text-dark">CONNEXION FORMATEUR</h5>
           </div>            
+            {googleCode && googleMessages[googleCode] && (
+              <div className={`learner-auth-alert mb-3 ${googleCode === 'pending' ? 'is-info' : ''}`} role="status">{googleMessages[googleCode]}</div>
+            )}
+            <GoogleSignInButton role="teacher" mode="login" />
+            <div className="learner-auth-divider my-3"><span>ou avec votre e-mail</span></div>
             {errorMsg && <p className='text-danger'>{errorMsg}</p>}
               <div className="form-floating mb-3">
                 <input type="email" value={teacherLoginData.email} onChange={handleChange} name='email' className="form-control" id="floatingInput" placeholder="name@example.com"/>
@@ -98,4 +121,5 @@ const TeacherLogin = () => {
   )
 }
 
+export { completeTeacherLogin }
 export default TeacherLogin
