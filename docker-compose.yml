@@ -178,10 +178,9 @@ services:
   jitsi-jvb:
     image: ghcr.io/jitsi/jvb:stable-11146-2
     restart: unless-stopped
-    read_only: true
-    tmpfs:
-      - /run:size=16M,mode=1750,exec
-      - /tmp:size=16M,mode=1777,noexec
+    # No read-only root here: the bridge extracts its native SCTP library
+    # (dcsctp4j) at runtime; in a read-only container it failed to load and
+    # every participant was refused with "no bridge available".
     environment:
       <<: *jitsi-env
       JVB_PORT: "10000"
