@@ -255,6 +255,12 @@ jobs:
               echo "Jitsi base href is not /meet/" >&2
               jitsi_ok=0
             }
+            api_type="$(curl -s -o /dev/null -w '%{content_type}' --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/api/auth/google/config/")"
+            echo "/api/auth/google/config/ -> $api_type"
+            case "$api_type" in
+              application/json*) ;;
+              *) echo "L’API ne répond pas en JSON (mauvais routage vers le backend)" >&2; exit 1 ;;
+            esac
             [ "$jitsi_ok" = 1 ] || {
               docker compose -p tcid-manage logs --tail 60 jitsi-prosody jitsi-jicofo jitsi-jvb jitsi-web
               echo "La classe virtuelle (Jitsi) ne répond pas" >&2
