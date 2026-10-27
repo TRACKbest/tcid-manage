@@ -141,7 +141,7 @@ sequenceDiagram
     actor U as Formateur / apprenant
     participant W as Site (React)
     participant API as API Django
-    participant J as Jitsi Meet (meet.tcid-madagascar.com)
+    participant J as Jitsi Meet (tcid-madagascar.com/meet)
     participant B as Videobridge (SFU, 10000/udp)
 
     U->>W: Clique « Démarrer » / « Rejoindre »

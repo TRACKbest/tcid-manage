@@ -33,13 +33,13 @@ persist in Docker volumes across deployments.
 
 The classroom video runs on a self-hosted Jitsi Meet stack (`jitsi-web`,
 `jitsi-prosody`, `jitsi-jicofo`, `jitsi-jvb`) served at
-`https://meet.<VPS_DOMAIN>`. Each participant receives a short-lived JWT from
+`https://<VPS_DOMAIN>/meet/` (Jitsi "meet" tenant, so no extra DNS record or
+certificate is needed). Each participant receives a short-lived JWT from
 the backend (`/api/live-classrooms/<id>/join/`): trainers join as moderators,
 learners as members, and nobody can enter a room without a token.
 
 Before the first deployment:
 
-- DNS: add an `A` record `meet` → the VPS IP (same as the main domain).
 - Firewall: open `10000/udp` (Jitsi media) plus the TURN ports
   `3478/tcp+udp` and `49160-49200/udp` (fallback when UDP 10000 is blocked).
   With `ufw`: `sudo ufw allow 10000/udp && sudo ufw allow 3478 && sudo ufw allow 49160:49200/udp`.

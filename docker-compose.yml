@@ -1,6 +1,6 @@
 x-jitsi-env: &jitsi-env
   TZ: Indian/Antananarivo
-  PUBLIC_URL: https://meet.${VPS_DOMAIN:?Set VPS_DOMAIN in the VPS .env file}
+  PUBLIC_URL: https://${VPS_DOMAIN:?Set VPS_DOMAIN in the VPS .env file}
   XMPP_SERVER: xmpp.meet.jitsi
   XMPP_DOMAIN: meet.jitsi
   XMPP_AUTH_DOMAIN: auth.meet.jitsi
@@ -85,7 +85,7 @@ services:
       retries: 5
 
   # ---- Virtual classroom: Jitsi Meet (SFU) ----------------------------------
-  # Served on https://meet.<VPS_DOMAIN> through Caddy. Only learners/trainers
+  # Served on https://<VPS_DOMAIN>/meet/ (Jitsi "meet" tenant) through Caddy. Only learners/trainers
   # holding a JWT signed by the backend can join a room. Media flows through
   # the videobridge on 10000/udp (open it in the VPS firewall), with coturn as
   # a fallback for networks that block UDP.

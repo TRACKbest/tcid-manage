@@ -194,7 +194,7 @@ jobs:
             # Media (Jitsi videobridge 10000/udp, TURN 3478) must reach the VPS
             # IP directly: Cloudflare does not proxy these ports.
             update_env JVB_ADVERTISE_IPS "$(getent ahostsv4 "$VPS_HOST" | awk 'NR==1{print $1}')"
-            update_env JITSI_DOMAIN "meet.$VPS_DOMAIN"
+            update_env JITSI_DOMAIN "$VPS_DOMAIN/meet"
             update_env GOOGLE_OAUTH_CLIENT_ID "${GOOGLE_OAUTH_CLIENT_ID:-}"
             update_env GOOGLE_OAUTH_CLIENT_SECRET "${GOOGLE_OAUTH_CLIENT_SECRET:-}"
             update_env GOOGLE_OAUTH_REDIRECT_URI "https://$VPS_DOMAIN/api/auth/callback/google"
@@ -207,6 +207,12 @@ jobs:
             cd "$DEPLOY_ROOT/current"
             docker compose -p tcid-manage config --quiet
             docker compose -p tcid-manage up --build --detach --remove-orphans
+            # Caddy keeps the Caddyfile of the release it was created from:
+            # recreate it whenever the routing changed.
+            caddy_id="$(docker compose -p tcid-manage ps -q caddy)"
+            if [ -n "$caddy_id" ] && ! docker exec "$caddy_id" cat /etc/caddy/Caddyfile | cmp -s - Caddyfile; then
+              docker compose -p tcid-manage up --detach --force-recreate caddy
+            fi
 
             for service in backend frontend caddy; do
               container_id="$(docker compose -p tcid-manage ps -q "$service")"
@@ -232,6 +238,24 @@ jobs:
               }
             done
             docker compose -p tcid-manage ps
+
+            # Virtual classroom smoke test: prosody must stay up and Jitsi must
+            # answer on https://<domain>/meet/ through Caddy.
+            sleep 20
+            prosody_state="$(docker inspect --format '{{.State.Status}} {{.RestartCount}}' "$(docker compose -p tcid-manage ps -q jitsi-prosody)")"
+            echo "jitsi-prosody: $prosody_state"
+            jitsi_ok=1
+            [ "${prosody_state%% *}" = running ] || jitsi_ok=0
+            for path in meet/config.js meet/external_api.js; do
+              code="$(curl -s -o /dev/null -w '%{http_code}' --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/$path")"
+              echo "/$path -> $code"
+              [ "$code" = 200 ] || jitsi_ok=0
+            done
+            [ "$jitsi_ok" = 1 ] || {
+              docker compose -p tcid-manage logs --tail 60 jitsi-prosody jitsi-jicofo jitsi-jvb jitsi-web
+              echo "La classe virtuelle (Jitsi) ne répond pas" >&2
+              exit 1
+            }
 
       - name: Remove deployment archive
         if: always()

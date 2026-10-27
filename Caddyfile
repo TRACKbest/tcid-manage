@@ -1,11 +1,15 @@
 {$VPS_DOMAIN}, www.{$VPS_DOMAIN} {
     encode zstd gzip
-    reverse_proxy frontend:80
-}
 
-meet.{$VPS_DOMAIN} {
-    encode zstd gzip
-    reverse_proxy jitsi-web:8000
+    # Virtual classroom: Jitsi Meet served as the "meet" tenant
+    # (https://<domain>/meet/<room>, /meet/http-bind, /meet/xmpp-websocket).
+    handle /meet/* {
+        reverse_proxy jitsi-web:8000
+    }
+
+    handle {
+        reverse_proxy frontend:80
+    }
 }
 
 :80 {
