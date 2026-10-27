@@ -158,8 +158,18 @@ services:
     environment:
       <<: *jitsi-env
       ENABLE_AUTO_OWNER: "0"
+      # REST on the internal network only; /about/health runs a real test
+      # conference on a videobridge (exposed read-only as /meet/_health).
+      JICOFO_ENABLE_REST: "1"
+      JICOFO_ENABLE_HEALTH_CHECKS: "1"
     volumes:
       - jitsi_jicofo_config:/config
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:8888/about/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     depends_on:
       - jitsi-prosody
     networks:
@@ -180,6 +190,12 @@ services:
       - "10000:10000/udp"
     volumes:
       - jitsi_jvb_config:/config
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://127.0.0.1:8080/about/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     depends_on:
       - jitsi-prosody
     networks:
@@ -228,6 +244,7 @@ services:
       - caddy_config:/config
     networks:
       - default
+      - meet.jitsi
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/"]
       interval: 15s

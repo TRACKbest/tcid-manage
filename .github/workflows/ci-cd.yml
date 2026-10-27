@@ -239,13 +239,25 @@ jobs:
             done
             docker compose -p tcid-manage ps
 
-            # Virtual classroom smoke test: prosody must stay up and Jitsi must
-            # answer on https://<domain>/meet/ through Caddy.
+            # Virtual classroom smoke test: prosody must stay up, jicofo must
+            # see a working videobridge, and Jitsi must answer on /meet/.
             sleep 20
+            jitsi_health() {
+              docker compose -p tcid-manage exec -T jitsi-jicofo curl -fs -m 20 http://127.0.0.1:8888/about/health >/dev/null 2>&1
+            }
+            bridge_ok=0
+            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+              jitsi_health && { bridge_ok=1; break; }
+              # jicofo/JVB may hold a stale connection to a recreated prosody.
+              [ "$attempt" = 4 ] && docker compose -p tcid-manage restart jitsi-jvb jitsi-jicofo
+              sleep 10
+            done
+            echo "jicofo + videobridge health: $bridge_ok"
             prosody_state="$(docker inspect --format '{{.State.Status}} {{.RestartCount}}' "$(docker compose -p tcid-manage ps -q jitsi-prosody)")"
             echo "jitsi-prosody: $prosody_state"
             jitsi_ok=1
             [ "${prosody_state%% *}" = running ] || jitsi_ok=0
+            [ "$bridge_ok" = 1 ] || jitsi_ok=0
             for path in meet/config.js meet/external_api.js meet/libs/app.bundle.min.js; do
               code="$(curl -s -o /dev/null -w '%{http_code}' --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/$path")"
               echo "/$path -> $code"

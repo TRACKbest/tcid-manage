@@ -3,6 +3,12 @@
 
     # Virtual classroom: Jitsi Meet served as the "meet" tenant
     # (https://<domain>/meet/<room>, /meet/http-bind, /meet/xmpp-websocket).
+    # Read-only Jitsi health (jicofo test conference on a videobridge).
+    handle /meet/_health {
+        rewrite * /about/health
+        reverse_proxy jitsi-jicofo:8888
+    }
+
     handle /meet/* {
         reverse_proxy jitsi-web:8000
     }
