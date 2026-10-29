@@ -190,9 +190,13 @@ jobs:
           dir="$RUNNER_TEMP/secrets"
           mkdir -p "$dir/app" "$dir/meet"
           fetch() {  # fetch <secret-manager-name> <file> [optional]
-            gcloud secrets versions access latest --secret="$1" > "$2" 2>/dev/null \
-              || { [ "${3:-}" = optional ] && : > "$2"; } \
-              || { echo "Missing secret $1 in Secret Manager" >&2; exit 1; }
+            if value=$(gcloud secrets versions access latest --secret="$1" 2>/dev/null); then
+              printf '%s' "$value" | tr -d '\r\n' > "$2"
+            elif [ "${3:-}" = optional ]; then
+              : > "$2"
+            else
+              echo "Missing secret $1 in Secret Manager" >&2; exit 1
+            fi
           }
           fetch tcid-django-secret-key "$dir/app/DJANGO_SECRET_KEY"
           fetch tcid-postgres-password "$dir/app/POSTGRES_PASSWORD"

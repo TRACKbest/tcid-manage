@@ -32,7 +32,8 @@ sync_secrets() {
   kubectl apply -f k8s/base/00-namespaces.yaml
   dir=$(mktemp -d)
   mkdir -p "$dir/app" "$dir/meet"
-  get() { gcloud secrets versions access latest --project="$PROJECT_ID" --secret="$1" > "$2" 2>/dev/null || : > "$2"; }
+  # tr: gcloud on Windows appends a line break, which would end up in the value.
+  get() { { gcloud secrets versions access latest --project="$PROJECT_ID" --secret="$1" 2>/dev/null || true; } | tr -d '\r\n' > "$2"; }
   get tcid-django-secret-key "$dir/app/DJANGO_SECRET_KEY"
   get tcid-postgres-password "$dir/app/POSTGRES_PASSWORD"
   get tcid-jitsi-jwt-secret "$dir/app/JITSI_JWT_SECRET"

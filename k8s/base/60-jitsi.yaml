@@ -1,3 +1,6 @@
+# The Jitsi images (s6-overlay) start through a setuid helper, so their
+# containers cannot set allowPrivilegeEscalation=false; the namespace still
+# enforces the "baseline" profile (no privileged pods, no host access).
 # Jitsi Meet (SFU) served at https://tcid-madagascar.com/meet/ (tenant "meet").
 # Signalling goes through the HTTPS load balancer and nginx; media reaches the
 # videobridge directly on a dedicated UDP load balancer (port 10000).
@@ -95,8 +98,6 @@ spec:
             tcpSocket:
               port: 5222
             periodSeconds: 10
-          securityContext:
-            allowPrivilegeEscalation: false
           volumeMounts:
             - name: data
               mountPath: /var/lib/prosody
@@ -169,8 +170,6 @@ spec:
               port: rest
             initialDelaySeconds: 30
             periodSeconds: 15
-          securityContext:
-            allowPrivilegeEscalation: false
 ---
 apiVersion: v1
 kind: Service
@@ -230,8 +229,6 @@ spec:
               path: /meet/config.js
               port: http
             periodSeconds: 15
-          securityContext:
-            allowPrivilegeEscalation: false
           volumeMounts:
             - name: web-files
               mountPath: /usr/share/jitsi-meet/base.html
@@ -307,8 +304,6 @@ spec:
               port: colibri
             initialDelaySeconds: 60
             periodSeconds: 30
-          securityContext:
-            allowPrivilegeEscalation: false
 ---
 apiVersion: v1
 kind: Service
@@ -392,9 +387,10 @@ spec:
               port: 3478
             periodSeconds: 15
           securityContext:
-            allowPrivilegeEscalation: false
+            # turnserver carries a file capability: keep only that one.
             capabilities:
               drop: ["ALL"]
+              add: ["NET_BIND_SERVICE"]
 ---
 apiVersion: v1
 kind: Service
