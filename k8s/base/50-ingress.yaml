@@ -1,0 +1,57 @@
+# Global HTTPS load balancer: static IP, Google-managed certificate,
+# HTTP -> HTTPS redirect and a TLS 1.2+ policy.
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: tcid-cert
+  namespace: tcid
+spec:
+  domains:
+    - tcid-madagascar.com
+    - www.tcid-madagascar.com
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: tcid-frontendconfig
+  namespace: tcid
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT
+  sslPolicy: tcid-ssl-policy
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: frontend-backendconfig
+  namespace: tcid
+spec:
+  # WebSocket (classroom whiteboard, Jitsi XMPP) stay open up to one hour.
+  timeoutSec: 3600
+  connectionDraining:
+    drainingTimeoutSec: 30
+  healthCheck:
+    type: HTTP
+    requestPath: /healthz
+    port: 8080
+  logging:
+    enable: true
+    sampleRate: 0.5
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tcid
+  namespace: tcid
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: "tcid-ip"
+    networking.gke.io/managed-certificates: "tcid-cert"
+    networking.gke.io/v1beta1.FrontendConfig: "tcid-frontendconfig"
+spec:
+  defaultBackend:
+    service:
+      name: frontend
+      port:
+        number: 80

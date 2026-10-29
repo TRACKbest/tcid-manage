@@ -1,0 +1,40 @@
+# Database migrations run once per deployment, before the new pods take
+# traffic (applied by the pipeline with the image of the commit).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: tcid
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: migrate
+        db-client: "true"
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: BACKEND_IMAGE
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          envFrom:
+            - configMapRef:
+                name: tcid-config
+            - secretRef:
+                name: tcid-secrets
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

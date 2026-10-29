@@ -17,9 +17,11 @@ from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
-from main import admin_api
+from main import admin_api, health
 
 urlpatterns = [
+    path('api/healthz/', health.healthz),
+    path('api/readyz/', health.readyz),
     path('api/admin-ui/csrf/', admin_api.admin_csrf),
     path('api/admin-ui/login/', admin_api.admin_login),
     path('api/admin-ui/session/', admin_api.admin_session),

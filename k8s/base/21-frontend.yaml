@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend
+  namespace: tcid
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: tcid
+  labels:
+    app: frontend
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+      annotations:
+        gke-gcsfuse/volumes: "true"
+    spec:
+      serviceAccountName: frontend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend
+      initContainers:
+        # Django admin static files, collected from the same backend image
+        # that is deployed, so nginx always serves the matching version.
+        - name: collectstatic
+          image: tcid-backend
+          command: ["python", "manage.py", "collectstatic", "--noinput"]
+          envFrom:
+            - configMapRef:
+                name: tcid-config
+          securityContext:
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - name: static
+              mountPath: /app/staticfiles
+      containers:
+        - name: nginx
+          image: tcid-frontend
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: NGINX_RESOLVER
+              value: kube-dns.kube-system.svc.cluster.local
+            - name: BACKEND_UPSTREAM
+              value: http://backend.tcid.svc.cluster.local:8000
+            - name: JITSI_WEB_UPSTREAM
+              value: http://jitsi-web.tcid-meet.svc.cluster.local:8000
+            - name: JICOFO_UPSTREAM
+              value: http://jicofo.tcid-meet.svc.cluster.local:8888
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: static
+              mountPath: /app/staticfiles
+              readOnly: true
+            - name: media
+              mountPath: /app/media
+              readOnly: true
+      volumes:
+        - name: static
+          emptyDir: {}
+        - name: media
+          csi:
+            driver: gcsfuse.csi.storage.gke.io
+            readOnly: true
+            volumeAttributes:
+              bucketName: tcidcenter-media
+              mountOptions: "implicit-dirs,uid=101,gid=101"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: tcid
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "frontend-backendconfig"}'
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

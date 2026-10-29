@@ -1,0 +1,107 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+map $http_x_forwarded_proto $client_proto {
+    default $http_x_forwarded_proto;
+    '' $scheme;
+}
+
+# HSTS only when the visitor reached us over HTTPS (load balancer / Caddy).
+map $client_proto $hsts {
+    https "max-age=31536000; includeSubDomains";
+    default "";
+}
+
+server {
+    listen 8080;
+    server_name _;
+    client_max_body_size 2g;
+    root /usr/share/nginx/html;
+    index index.html;
+    server_tokens off;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header Strict-Transport-Security $hsts always;
+
+    # Upstreams come from the environment (Docker: short names and Docker's
+    # DNS; Kubernetes: cluster FQDNs and kube-dns). A resolver with variable
+    # upstreams re-resolves names, so a recreated container never keeps a
+    # stale IP that may now belong to another service.
+    resolver ${NGINX_RESOLVER} valid=10s ipv6=off;
+    set $backend_upstream ${BACKEND_UPSTREAM};
+    set $jitsi_upstream ${JITSI_WEB_UPSTREAM};
+    set $jicofo_upstream ${JICOFO_UPSTREAM};
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location /api/ {
+        proxy_pass $backend_upstream;
+        proxy_http_version 1.1;
+        proxy_request_buffering off;
+        proxy_read_timeout 900s;
+        proxy_send_timeout 900s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $client_proto;
+    }
+
+    location /api-auth/ {
+        proxy_pass $backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $client_proto;
+    }
+
+    location /ws/ {
+        proxy_pass $backend_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $client_proto;
+        proxy_read_timeout 3600s;
+    }
+
+    # Virtual classroom (Jitsi "meet" tenant). Behind Caddy these paths are
+    # routed before reaching nginx; behind the GKE load balancer nginx is the
+    # single entry point and forwards them to the Jitsi namespace.
+    location = /meet/_health {
+        proxy_pass $jicofo_upstream/about/health;
+    }
+
+    location /meet/ {
+        proxy_pass $jitsi_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $client_proto;
+        proxy_read_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    location /static/admin/ {
+        alias /app/staticfiles/admin/;
+    }
+
+    location /static/ {
+        root /usr/share/nginx/html;
+        try_files $uri =404;
+    }
+
+    location /media/ {
+        alias /app/media/;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

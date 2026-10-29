@@ -11,7 +11,14 @@ ENV REACT_APP_API_URL=${REACT_APP_API_URL} \
     REACT_APP_SITE_URL=${REACT_APP_SITE_URL}
 RUN npm run build
 
-FROM nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Unprivileged nginx (uid 101, port 8080): runs under the Kubernetes
+# "restricted" Pod Security Standard.
+FROM nginxinc/nginx-unprivileged:1.27-alpine
+# Docker Compose defaults; Kubernetes overrides them with cluster FQDNs.
+ENV NGINX_RESOLVER=127.0.0.11 \
+    BACKEND_UPSTREAM=http://backend:8000 \
+    JITSI_WEB_UPSTREAM=http://jitsi-web:8000 \
+    JICOFO_UPSTREAM=http://jitsi-jicofo:8888
+COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/build /usr/share/nginx/html
-EXPOSE 80
+EXPOSE 8080

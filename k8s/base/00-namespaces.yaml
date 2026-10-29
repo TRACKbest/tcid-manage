@@ -1,0 +1,20 @@
+# Two namespaces, two security levels (Pod Security Admission):
+# - tcid: the application, held to the "restricted" profile (non-root,
+#   no privilege escalation, all capabilities dropped, seccomp).
+# - tcid-meet: Jitsi, whose images start as root before dropping privileges,
+#   so it gets "baseline" (no privileged pods, no host namespaces).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tcid
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tcid-meet
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted

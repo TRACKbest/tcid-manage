@@ -349,3 +349,10 @@ class GoogleSignInTests(TestCase):
         self.assertFalse(teacher.is_approved)
         self.assertEqual(teacher.full_name, 'Rakoto')
         self.assertFalse(Student.objects.filter(email='prof@example.com').exists())
+
+
+class HealthProbeTests(TestCase):
+    def test_liveness_and_readiness_answer_ok(self):
+        client = APIClient()
+        self.assertEqual(client.get('/api/healthz/').json(), {'status': 'ok'})
+        self.assertEqual(client.get('/api/readyz/').json(), {'status': 'ok'})

@@ -93,192 +93,163 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-  docker-build:
-    name: Build Docker images
+  manifests:
+    name: Kubernetes manifests
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-test]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build backend image
-        run: docker build --tag tcid-backend:ci ./backend
+      - name: Render and validate (kustomize + kubeconform)
+        run: |
+          kubectl kustomize k8s/overlays/prod > rendered.yaml
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar -xz kubeconform
+          # GKE custom resources (ManagedCertificate, BackendConfig...) have no public schema.
+          ./kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0 rendered.yaml
+          ./kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0 k8s/jobs/migrate.yaml
 
-      - name: Build frontend image
-        run: docker build --build-arg REACT_APP_API_URL=/api --build-arg REACT_APP_SITE_URL=/ --tag tcid-frontend:ci ./frontend
+  images:
+    name: Build, scan and push images
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, manifests]
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/tcid-repo
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.GKE_ENABLED == 'true' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build images
+        run: |
+          docker build --tag tcid-backend:ci ./backend
+          docker build --build-arg REACT_APP_API_URL=/api --build-arg REACT_APP_SITE_URL=/ --tag tcid-frontend:ci ./frontend
+
+      # DevSecOps gate: no image with a fixable CRITICAL vulnerability ships.
+      - name: Scan images (Trivy)
+        run: |
+          for image in tcid-backend:ci tcid-frontend:ci; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.63.0 \
+              image --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed --no-progress "$image"
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.63.0 \
+              image --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 --no-progress --quiet "$image"
+          done
+
+      - name: Authenticate to Google Cloud (OIDC, no key)
+        if: env.PUBLISH == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - name: Push to Artifact Registry
+        if: env.PUBLISH == 'true'
+        run: |
+          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          for name in backend frontend; do
+            docker tag "tcid-$name:ci" "$REGISTRY/$name:$GITHUB_SHA"
+            docker push "$REGISTRY/$name:$GITHUB_SHA"
+          done
 
   deploy:
-    name: Deploy to VPS
+    name: Deploy to GKE
     runs-on: ubuntu-latest
-    needs: docker-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: images
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.GKE_ENABLED == 'true'
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/tcid-repo
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Package commit
-        run: git archive --format=tar.gz --output=deploy.tar.gz "$GITHUB_SHA"
-
-      - name: Upload release to VPS
-        uses: appleboy/scp-action@v0.1.7
+      - name: Authenticate to Google Cloud (OIDC, no key)
+        uses: google-github-actions/auth@v2
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          fingerprint: ${{ secrets.VPS_FINGERPRINT }}
-          source: deploy.tar.gz
-          target: /var/www/tcid-manage/releases/${{ github.sha }}
-          overwrite: true
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
 
-      - name: Start production stack
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_DOMAIN: ${{ secrets.VPS_DOMAIN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-          OPENAI_MAX_TOKENS: ${{ secrets.OPENAI_MAX_TOKENS }}
-          GOOGLE_OAUTH_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
-          GOOGLE_OAUTH_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          fingerprint: ${{ secrets.VPS_FINGERPRINT }}
-          envs: GITHUB_SHA,VPS_HOST,VPS_DOMAIN,OPENAI_API_KEY,OPENAI_MODEL,OPENAI_MAX_TOKENS,GOOGLE_OAUTH_CLIENT_ID,GOOGLE_OAUTH_CLIENT_SECRET
-          script: |
-            set -eu
-            DEPLOY_ROOT=/var/www/tcid-manage
-            RELEASE="$DEPLOY_ROOT/releases/$GITHUB_SHA"
-            [ -n "${VPS_DOMAIN:-}" ] || {
-              echo "Le secret GitHub VPS_DOMAIN doit contenir le domaine de production." >&2
-              exit 1
-            }
-            mkdir -p "$RELEASE"
-            tar -xzf "$RELEASE/deploy.tar.gz" -C "$RELEASE"
+          cluster_name: tcid-cluster
+          location: ${{ vars.GCP_REGION }}
 
-            touch "$DEPLOY_ROOT/.env"
-            chmod 600 "$DEPLOY_ROOT/.env"
+      - name: Sync secrets from Secret Manager
+        run: |
+          kubectl apply -f k8s/base/00-namespaces.yaml
+          umask 077
+          dir="$RUNNER_TEMP/secrets"
+          mkdir -p "$dir/app" "$dir/meet"
+          fetch() {  # fetch <secret-manager-name> <file> [optional]
+            gcloud secrets versions access latest --secret="$1" > "$2" 2>/dev/null \
+              || { [ "${3:-}" = optional ] && : > "$2"; } \
+              || { echo "Missing secret $1 in Secret Manager" >&2; exit 1; }
+          }
+          fetch tcid-django-secret-key "$dir/app/DJANGO_SECRET_KEY"
+          fetch tcid-postgres-password "$dir/app/POSTGRES_PASSWORD"
+          fetch tcid-jitsi-jwt-secret "$dir/app/JITSI_JWT_SECRET"
+          fetch tcid-google-oauth-client-secret "$dir/app/GOOGLE_OAUTH_CLIENT_SECRET" optional
+          fetch tcid-openai-api-key "$dir/app/OPENAI_API_KEY" optional
+          cp "$dir/app/JITSI_JWT_SECRET" "$dir/meet/JITSI_JWT_SECRET"
+          fetch tcid-jicofo-password "$dir/meet/JICOFO_AUTH_PASSWORD"
+          fetch tcid-jvb-password "$dir/meet/JVB_AUTH_PASSWORD"
+          fetch tcid-turn-secret "$dir/meet/TURN_SECRET"
+          kubectl -n tcid create secret generic tcid-secrets --from-file="$dir/app" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n tcid-meet create secret generic jitsi-secrets --from-file="$dir/meet" --dry-run=client -o yaml | kubectl apply -f -
+          rm -rf "$dir"
 
-            ensure_env() {
-              name="$1"
-              value="$2"
-              grep -q "^${name}=." "$DEPLOY_ROOT/.env" && return 0
-              sed -i "/^${name}=/d" "$DEPLOY_ROOT/.env"
-              printf '%s=%s\n' "$name" "$value" >> "$DEPLOY_ROOT/.env"
-            }
-            ensure_env DJANGO_SECRET_KEY "$(openssl rand -hex 48)"
-            ensure_env DJANGO_DEBUG False
-            ensure_env POSTGRES_DB tcid
-            ensure_env POSTGRES_USER tcid
-            ensure_env POSTGRES_PASSWORD "$(openssl rand -hex 32)"
-            ensure_env REACT_ADMIN_URL /admin
-            ensure_env TURN_SECRET "$(openssl rand -hex 32)"
-            ensure_env JITSI_JWT_SECRET "$(openssl rand -hex 32)"
-            ensure_env JICOFO_AUTH_PASSWORD "$(openssl rand -hex 24)"
-            ensure_env JVB_AUTH_PASSWORD "$(openssl rand -hex 24)"
+      - name: Apply manifests (images pinned to this commit)
+        working-directory: k8s/overlays/prod
+        run: |
+          sed -i "s/newTag: latest/newTag: $GITHUB_SHA/" kustomization.yaml
+          kubectl apply -k .
+          kubectl -n tcid rollout status statefulset/postgres --timeout=300s
 
-            update_env() {
-              name="$1"
-              value="$2"
-              [ -n "$value" ] || return 0
-              sed -i "/^${name}=/d" "$DEPLOY_ROOT/.env"
-              printf '%s=%s\n' "$name" "$value" >> "$DEPLOY_ROOT/.env"
-            }
-            update_env VPS_DOMAIN "$VPS_DOMAIN"
-            update_env DJANGO_ALLOWED_HOSTS "$VPS_HOST,$VPS_DOMAIN,www.$VPS_DOMAIN,localhost,127.0.0.1"
-            update_env REACT_FRONTEND_ORIGINS "http://$VPS_HOST,https://$VPS_HOST,https://$VPS_DOMAIN,https://www.$VPS_DOMAIN"
-            # Media (Jitsi videobridge 10000/udp, TURN 3478) must reach the VPS
-            # IP directly: Cloudflare does not proxy these ports.
-            update_env JVB_ADVERTISE_IPS "$(getent ahostsv4 "$VPS_HOST" | awk 'NR==1{print $1}')"
-            update_env JITSI_DOMAIN "$VPS_DOMAIN/meet"
-            update_env GOOGLE_OAUTH_CLIENT_ID "${GOOGLE_OAUTH_CLIENT_ID:-}"
-            update_env GOOGLE_OAUTH_CLIENT_SECRET "${GOOGLE_OAUTH_CLIENT_SECRET:-}"
-            update_env GOOGLE_OAUTH_REDIRECT_URI "https://$VPS_DOMAIN/api/auth/callback/google"
-            update_env OPENAI_API_KEY "${OPENAI_API_KEY:-}"
-            update_env OPENAI_MODEL "${OPENAI_MODEL:-}"
-            update_env OPENAI_MAX_TOKENS "${OPENAI_MAX_TOKENS:-}"
+      - name: Run database migrations
+        run: |
+          kubectl -n tcid delete job migrate --ignore-not-found --wait=true
+          sed "s#BACKEND_IMAGE#$REGISTRY/backend:$GITHUB_SHA#" k8s/jobs/migrate.yaml | kubectl apply -f -
+          if ! kubectl -n tcid wait --for=condition=complete job/migrate --timeout=300s; then
+            kubectl -n tcid logs job/migrate --tail=100 || true
+            exit 1
+          fi
 
-            ln -sfn "$DEPLOY_ROOT/.env" "$RELEASE/.env"
-            ln -sfn "$RELEASE" "$DEPLOY_ROOT/current"
-            cd "$DEPLOY_ROOT/current"
-            docker compose -p tcid-manage config --quiet
-            docker compose -p tcid-manage up --build --detach --remove-orphans
-            # Caddy keeps the Caddyfile of the release it was created from:
-            # recreate it whenever the routing changed.
-            caddy_id="$(docker compose -p tcid-manage ps -q caddy)"
-            if [ -n "$caddy_id" ] && ! docker exec "$caddy_id" cat /etc/caddy/Caddyfile | cmp -s - Caddyfile; then
-              docker compose -p tcid-manage up --detach --force-recreate caddy
-            fi
+      - name: Wait for rollouts
+        run: |
+          for d in backend frontend redis; do kubectl -n tcid rollout status "deployment/$d" --timeout=600s; done
+          for d in prosody jicofo jitsi-web jvb coturn; do kubectl -n tcid-meet rollout status "deployment/$d" --timeout=600s; done
 
-            for service in backend frontend caddy; do
-              container_id="$(docker compose -p tcid-manage ps -q "$service")"
-              [ -n "$container_id" ] || {
-                echo "Container manquant pour le service $service" >&2
-                exit 1
-              }
-              attempt=0
-              while [ "$attempt" -lt 30 ]; do
-                health="$(docker inspect --format '{{.State.Health.Status}}' "$container_id")"
-                [ "$health" = healthy ] && break
-                [ "$health" != unhealthy ] || {
-                  docker compose -p tcid-manage logs "$service"
-                  exit 1
-                }
-                attempt=$((attempt + 1))
-                sleep 10
-              done
-              [ "$health" = healthy ] || {
-                docker compose -p tcid-manage logs "$service"
-                echo "Délai d’attente dépassé pour le healthcheck $service" >&2
-                exit 1
-              }
-            done
-            docker compose -p tcid-manage ps
-
-            # Virtual classroom smoke test: prosody must stay up, jicofo must
-            # see a working videobridge, and Jitsi must answer on /meet/.
-            sleep 20
-            jitsi_health() {
-              docker compose -p tcid-manage exec -T jitsi-jicofo curl -fs -m 20 http://127.0.0.1:8888/about/health >/dev/null 2>&1
-            }
-            bridge_ok=0
-            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
-              jitsi_health && { bridge_ok=1; break; }
-              # jicofo/JVB may hold a stale connection to a recreated prosody.
-              [ "$attempt" = 4 ] && docker compose -p tcid-manage restart jitsi-jvb jitsi-jicofo
+      # End-to-end checks through nginx: API + database, Jitsi web, and
+      # jicofo's test conference on the videobridge.
+      - name: Smoke tests
+        run: |
+          check() {
+            for attempt in $(seq 1 12); do
+              if kubectl -n tcid exec deploy/frontend -c nginx -- wget -q -O /dev/null "http://127.0.0.1:8080$1"; then
+                echo "OK  $1"; return 0
+              fi
               sleep 10
             done
-            echo "jicofo + videobridge health: $bridge_ok"
-            prosody_state="$(docker inspect --format '{{.State.Status}} {{.RestartCount}}' "$(docker compose -p tcid-manage ps -q jitsi-prosody)")"
-            echo "jitsi-prosody: $prosody_state"
-            jitsi_ok=1
-            [ "${prosody_state%% *}" = running ] || jitsi_ok=0
-            [ "$bridge_ok" = 1 ] || jitsi_ok=0
-            for path in meet/config.js meet/external_api.js meet/libs/app.bundle.min.js; do
-              code="$(curl -s -o /dev/null -w '%{http_code}' --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/$path")"
-              echo "/$path -> $code"
-              [ "$code" = 200 ] || jitsi_ok=0
-            done
-            curl -s --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/meet/classe" | grep -q '<base href="/meet/"' || {
-              echo "Jitsi base href is not /meet/" >&2
-              jitsi_ok=0
-            }
-            api_type="$(curl -s -o /dev/null -w '%{content_type}' --resolve "$VPS_DOMAIN:443:127.0.0.1" "https://$VPS_DOMAIN/api/auth/google/config/")"
-            echo "/api/auth/google/config/ -> $api_type"
-            case "$api_type" in
-              application/json*) ;;
-              *) echo "L’API ne répond pas en JSON (mauvais routage vers le backend)" >&2; exit 1 ;;
-            esac
-            [ "$jitsi_ok" = 1 ] || {
-              docker compose -p tcid-manage logs --tail 60 jitsi-prosody jitsi-jicofo jitsi-jvb jitsi-web
-              echo "La classe virtuelle (Jitsi) ne répond pas" >&2
-              exit 1
-            }
-
-      - name: Remove deployment archive
-        if: always()
-        run: rm -f deploy.tar.gz
+            echo "FAIL $1" >&2; return 1
+          }
+          ok=1
+          check /api/readyz/ || ok=0
+          check /meet/config.js || ok=0
+          check /meet/_health || ok=0
+          kubectl get pods -n tcid -o wide
+          kubectl get pods -n tcid-meet -o wide
+          if [ "$ok" != 1 ]; then
+            kubectl -n tcid logs deploy/backend --tail=50 || true
+            kubectl -n tcid-meet logs deploy/jicofo --tail=50 || true
+            kubectl -n tcid-meet logs deploy/jvb --tail=50 || true
+            exit 1
+          fi

@@ -1,0 +1,42 @@
+# Production on GKE Autopilot (project tcidcenter, region africa-south1).
+# The pipeline pins both images to the commit being deployed.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - name: tcid-backend
+    newName: africa-south1-docker.pkg.dev/tcidcenter/tcid-repo/backend
+    newTag: latest
+  - name: tcid-frontend
+    newName: africa-south1-docker.pkg.dev/tcidcenter/tcid-repo/frontend
+    newTag: latest
+# Reserved static IPs of the media load balancers (not secret).
+configMapGenerator:
+  - name: jitsi-network
+    namespace: tcid-meet
+    envs:
+      - network.env
+replacements:
+  - source:
+      kind: ConfigMap
+      name: jitsi-network
+      namespace: tcid-meet
+      fieldPath: data.JVB_IP
+    targets:
+      - select:
+          kind: Service
+          name: jvb
+        fieldPaths:
+          - spec.loadBalancerIP
+  - source:
+      kind: ConfigMap
+      name: jitsi-network
+      namespace: tcid-meet
+      fieldPath: data.TURN_IP
+    targets:
+      - select:
+          kind: Service
+          name: coturn
+        fieldPaths:
+          - spec.loadBalancerIP

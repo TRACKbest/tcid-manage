@@ -1,0 +1,163 @@
+# Zero-trust inside the cluster: every inbound flow is denied by default,
+# then only the arrows of the architecture diagram are opened.
+# (GKE Dataplane V2 enforces these policies.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: tcid
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+---
+# Google load balancer proxies and health checks -> nginx only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-from-load-balancer
+  namespace: tcid
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  ingress:
+    - from:
+        - ipBlock: { cidr: 35.191.0.0/16 }
+        - ipBlock: { cidr: 130.211.0.0/22 }
+      ports:
+        - { port: 8080, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-from-frontend
+  namespace: tcid
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - { port: 8000, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-from-db-clients
+  namespace: tcid
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              db-client: "true"
+      ports:
+        - { port: 5432, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-from-backend
+  namespace: tcid
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backend
+      ports:
+        - { port: 6379, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: tcid-meet
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+---
+# nginx (namespace tcid) -> Jitsi web and the jicofo health endpoint.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-from-frontend
+  namespace: tcid-meet
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: ["jitsi-web", "jicofo"] }
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tcid
+          podSelector:
+            matchLabels:
+              app: frontend
+      ports:
+        - { port: 8000, protocol: TCP }
+        - { port: 8888, protocol: TCP }
+---
+# Jitsi components talk to prosody (XMPP, BOSH/WebSocket) within the namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prosody-from-jitsi
+  namespace: tcid-meet
+spec:
+  podSelector:
+    matchLabels:
+      app: prosody
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: ["jitsi-web", "jicofo", "jvb"] }
+      ports:
+        - { port: 5222, protocol: TCP }
+        - { port: 5280, protocol: TCP }
+        - { port: 5347, protocol: TCP }
+---
+# Public media and TURN entry points.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: media-from-internet
+  namespace: tcid-meet
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: ["jvb", "coturn"] }
+  ingress:
+    - ports:
+        - { port: 10000, protocol: UDP }
+        - { port: 3478, protocol: TCP }
+---
+# jicofo asks the bridge for its health on the colibri port.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: jvb-colibri-from-jicofo
+  namespace: tcid-meet
+spec:
+  podSelector:
+    matchLabels:
+      app: jvb
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: jicofo
+      ports:
+        - { port: 8080, protocol: TCP }

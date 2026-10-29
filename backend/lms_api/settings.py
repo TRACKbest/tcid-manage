@@ -101,8 +101,14 @@ INSTALLED_APPS = [
 ]
 
 ASGI_APPLICATION = 'lms_api.asgi.application'
+# Several backend replicas (Kubernetes) must share WebSocket groups through
+# Redis; a single process (local, Docker Compose) can keep them in memory.
+REDIS_URL = os.environ.get('REDIS_URL', '')
 CHANNEL_LAYERS = {
     'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {'hosts': [REDIS_URL]},
+    } if REDIS_URL else {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }

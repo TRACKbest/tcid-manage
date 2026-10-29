@@ -1,0 +1,410 @@
+# Jitsi Meet (SFU) served at https://tcid-madagascar.com/meet/ (tenant "meet").
+# Signalling goes through the HTTPS load balancer and nginx; media reaches the
+# videobridge directly on a dedicated UDP load balancer (port 10000).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jitsi-common
+  namespace: tcid-meet
+data:
+  TZ: Indian/Antananarivo
+  PUBLIC_URL: https://tcid-madagascar.com
+  XMPP_SERVER: prosody.tcid-meet.svc.cluster.local
+  XMPP_DOMAIN: meet.jitsi
+  XMPP_AUTH_DOMAIN: auth.meet.jitsi
+  XMPP_MUC_DOMAIN: muc.meet.jitsi
+  XMPP_INTERNAL_MUC_DOMAIN: internal-muc.meet.jitsi
+  XMPP_GUEST_DOMAIN: guest.meet.jitsi
+  XMPP_BOSH_URL_BASE: http://prosody.tcid-meet.svc.cluster.local:5280
+  ENABLE_XMPP_WEBSOCKET: "1"
+  ENABLE_AUTH: "1"
+  ENABLE_GUESTS: "0"
+  AUTH_TYPE: jwt
+  JWT_APP_ID: tcid-center
+  JWT_ACCEPTED_ISSUERS: tcid-center
+  JWT_ACCEPTED_AUDIENCES: jitsi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jitsi-web-files
+  namespace: tcid-meet
+data:
+  # Jitsi lives under /meet/: its relative assets must resolve there.
+  base.html: |
+    <base href="/meet/" />
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prosody
+  namespace: tcid-meet
+  labels:
+    app: prosody
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: prosody
+  template:
+    metadata:
+      labels:
+        app: prosody
+    spec:
+      containers:
+        - name: prosody
+          image: ghcr.io/jitsi/prosody:stable-11146-2
+          envFrom:
+            - configMapRef:
+                name: jitsi-common
+          env:
+            - name: XMPP_MUC_MODULES
+              value: token_affiliation
+            - name: JWT_APP_SECRET
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: JITSI_JWT_SECRET }
+            - name: JICOFO_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: JICOFO_AUTH_PASSWORD }
+            - name: JVB_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: JVB_AUTH_PASSWORD }
+            - name: TURN_CREDENTIALS
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: TURN_SECRET }
+            - name: TURN_HOST
+              valueFrom:
+                configMapKeyRef: { name: jitsi-network, key: TURN_IP }
+            - name: TURN_PORT
+              value: "3478"
+            - name: TURN_TRANSPORT
+              value: tcp
+          ports:
+            - { name: xmpp-c2s, containerPort: 5222 }
+            - { name: xmpp-component, containerPort: 5347 }
+            - { name: bosh, containerPort: 5280 }
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          readinessProbe:
+            tcpSocket:
+              port: 5222
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/prosody
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prosody
+  namespace: tcid-meet
+spec:
+  selector:
+    app: prosody
+  ports:
+    - { name: xmpp-c2s, port: 5222, targetPort: 5222 }
+    - { name: xmpp-component, port: 5347, targetPort: 5347 }
+    - { name: bosh, port: 5280, targetPort: 5280 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jicofo
+  namespace: tcid-meet
+  labels:
+    app: jicofo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jicofo
+  template:
+    metadata:
+      labels:
+        app: jicofo
+    spec:
+      containers:
+        - name: jicofo
+          image: ghcr.io/jitsi/jicofo:stable-11146-2
+          envFrom:
+            - configMapRef:
+                name: jitsi-common
+          env:
+            - name: ENABLE_AUTO_OWNER
+              value: "0"
+            - name: JICOFO_ENABLE_REST
+              value: "1"
+            - name: JICOFO_ENABLE_HEALTH_CHECKS
+              value: "1"
+            - name: JWT_APP_SECRET
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: JITSI_JWT_SECRET }
+            - name: JICOFO_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: JICOFO_AUTH_PASSWORD }
+          ports:
+            - { name: rest, containerPort: 8888 }
+          resources:
+            requests:
+              cpu: 250m
+              memory: 768Mi
+            limits:
+              memory: 1536Mi
+          readinessProbe:
+            httpGet:
+              path: /about/health
+              port: rest
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jicofo
+  namespace: tcid-meet
+spec:
+  selector:
+    app: jicofo
+  ports:
+    - { name: rest, port: 8888, targetPort: rest }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jitsi-web
+  namespace: tcid-meet
+  labels:
+    app: jitsi-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jitsi-web
+  template:
+    metadata:
+      labels:
+        app: jitsi-web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/jitsi/web:stable-11146-2
+          envFrom:
+            - configMapRef:
+                name: jitsi-common
+          env:
+            - { name: DISABLE_HTTPS, value: "1" }
+            - { name: ENABLE_HTTP_REDIRECT, value: "0" }
+            - { name: ENABLE_LETSENCRYPT, value: "0" }
+            - { name: DISABLE_DEEP_LINKING, value: "true" }
+            - { name: DEFAULT_LANGUAGE, value: fr }
+            - { name: ENABLE_PREJOIN_PAGE, value: "true" }
+            - { name: ENABLE_WELCOME_PAGE, value: "false" }
+            - { name: ENABLE_CLOSE_PAGE, value: "false" }
+            - name: TOOLBAR_BUTTONS
+              value: microphone,camera,desktop,chat,raisehand,participants-pane,tileview,settings,fullscreen,select-background,hangup
+          ports:
+            - { name: http, containerPort: 8000 }
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /meet/config.js
+              port: http
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+          volumeMounts:
+            - name: web-files
+              mountPath: /usr/share/jitsi-meet/base.html
+              subPath: base.html
+      volumes:
+        - name: web-files
+          configMap:
+            name: jitsi-web-files
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jitsi-web
+  namespace: tcid-meet
+spec:
+  selector:
+    app: jitsi-web
+  ports:
+    - { name: http, port: 8000, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jvb
+  namespace: tcid-meet
+  labels:
+    app: jvb
+spec:
+  # One bridge: a conference must stay on the bridge that hosts it.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jvb
+  template:
+    metadata:
+      labels:
+        app: jvb
+    spec:
+      containers:
+        - name: jvb
+          image: ghcr.io/jitsi/jvb:stable-11146-2
+          envFrom:
+            - configMapRef:
+                name: jitsi-common
+          env:
+            - { name: JVB_PORT, value: "10000" }
+            - name: JVB_ADVERTISE_IPS
+              valueFrom:
+                configMapKeyRef: { name: jitsi-network, key: JVB_IP }
+            - name: JVB_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: JVB_AUTH_PASSWORD }
+          ports:
+            - { name: media, containerPort: 10000, protocol: UDP }
+            - { name: colibri, containerPort: 8080 }
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1536Mi
+            limits:
+              memory: 3Gi
+          readinessProbe:
+            httpGet:
+              path: /about/health
+              port: colibri
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /about/health
+              port: colibri
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jvb
+  namespace: tcid-meet
+  annotations:
+    cloud.google.com/l4-rbs: "enabled"
+spec:
+  type: LoadBalancer
+  loadBalancerIP: JVB_IP_PLACEHOLDER
+  externalTrafficPolicy: Local
+  selector:
+    app: jvb
+  ports:
+    - { name: media, port: 10000, targetPort: media, protocol: UDP }
+---
+# TURN relay for networks that block UDP: clients reach it over TCP 3478 and
+# it relays to the videobridge's public address. Private ranges stay denied
+# so it can never be used to reach internal services.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coturn
+  namespace: tcid-meet
+  labels:
+    app: coturn
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coturn
+  template:
+    metadata:
+      labels:
+        app: coturn
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: coturn
+          image: coturn/coturn:4.6.3
+          args:
+            - -n
+            - --log-file=stdout
+            - --listening-port=3478
+            - --min-port=49160
+            - --max-port=49200
+            - --fingerprint
+            - --use-auth-secret
+            - --static-auth-secret=$(TURN_SECRET)
+            - --realm=tcid-madagascar.com
+            - --no-cli
+            - --no-multicast-peers
+            - --no-tlsv1
+            - --no-tlsv1_1
+            - --denied-peer-ip=0.0.0.0-0.255.255.255
+            - --denied-peer-ip=10.0.0.0-10.255.255.255
+            - --denied-peer-ip=100.64.0.0-100.127.255.255
+            - --denied-peer-ip=127.0.0.0-127.255.255.255
+            - --denied-peer-ip=169.254.0.0-169.254.255.255
+            - --denied-peer-ip=172.16.0.0-172.31.255.255
+            - --denied-peer-ip=192.168.0.0-192.168.255.255
+          env:
+            - name: TURN_SECRET
+              valueFrom:
+                secretKeyRef: { name: jitsi-secrets, key: TURN_SECRET }
+          ports:
+            - { name: turn-tcp, containerPort: 3478, protocol: TCP }
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          readinessProbe:
+            tcpSocket:
+              port: 3478
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coturn
+  namespace: tcid-meet
+spec:
+  type: LoadBalancer
+  loadBalancerIP: TURN_IP_PLACEHOLDER
+  selector:
+    app: coturn
+  ports:
+    - { name: turn-tcp, port: 3478, targetPort: turn-tcp, protocol: TCP }

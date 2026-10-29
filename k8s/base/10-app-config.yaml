@@ -1,0 +1,21 @@
+# Non-secret application settings. Secrets (Django key, database password,
+# Jitsi JWT secret, OAuth and OpenAI keys) live in Google Secret Manager and
+# are synced into the "tcid-secrets" Secret by the deployment pipeline.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tcid-config
+  namespace: tcid
+data:
+  DJANGO_DEBUG: "False"
+  # localhost: Kubernetes probes call the pods with "Host: localhost".
+  DJANGO_ALLOWED_HOSTS: "tcid-madagascar.com,www.tcid-madagascar.com,localhost,127.0.0.1"
+  REACT_FRONTEND_ORIGINS: "https://tcid-madagascar.com,https://www.tcid-madagascar.com"
+  REACT_ADMIN_URL: "/admin"
+  POSTGRES_DB: "tcid"
+  POSTGRES_USER: "tcid"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  REDIS_URL: "redis://redis:6379/0"
+  JITSI_DOMAIN: "tcid-madagascar.com/meet"
+  GOOGLE_OAUTH_REDIRECT_URI: "https://tcid-madagascar.com/api/auth/callback/google"
