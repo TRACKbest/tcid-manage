@@ -8,12 +8,12 @@
       "type": "image/x-icon"
     },
     {
-      "src": "tcid-center-logo.png",
+      "src": "/tcid-center-logo.png?v=2",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "tcid-center-logo.png",
+      "src": "/tcid-center-logo.png?v=2",
       "type": "image/png",
       "sizes": "512x512"
     }

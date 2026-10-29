@@ -300,7 +300,7 @@ function AdminLogin({ onLogin }) {
   return (
     <main className="admin-login-page">
       <form className="admin-login-panel" onSubmit={submit}>
-        <img className="admin-brand-mark" src="/tcid-center-logo.png" alt="TCiD Center" />
+        <img className="admin-brand-mark" src="/tcid-center-logo.png?v=2" alt="TCiD Center" />
         <p className="admin-kicker">ESPACE ADMINISTRATEUR</p>
         <h1>Administration</h1>
         <label>Identifiant<input autoComplete="username" required value={credentials.username} onChange={(event) => setCredentials({ ...credentials, username: event.target.value })} /></label>
@@ -595,7 +595,7 @@ function AdminConsole() {
   return (
     <div className="admin-console">
       <aside className="admin-sidebar">
-        <div className="admin-sidebar-brand"><img className="admin-brand-mark" src="/tcid-center-logo.png" alt="TCiD Center" /><span>Administration</span></div>
+        <div className="admin-sidebar-brand"><img className="admin-brand-mark" src="/tcid-center-logo.png?v=2" alt="TCiD Center" /><span>Administration</span></div>
         <button className={`admin-nav-item ${view === 'overview' ? 'is-active' : ''}`} onClick={() => chooseResource(null)}><span><span className="admin-nav-symbol">⌂</span> Tableau de bord</span></button>
         <button className={`admin-nav-item ${view === 'payments' ? 'is-active' : ''}`} onClick={openPayments}><span><span className="admin-nav-symbol">₳</span> Paiements</span>{stats?.pendingPayments > 0 && <span className="admin-nav-count is-alert">{stats.pendingPayments}</span>}</button>
         <div className="admin-sidebar-scroll">

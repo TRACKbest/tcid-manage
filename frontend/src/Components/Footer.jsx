@@ -45,7 +45,7 @@ const Footer = () => {
                         <div className="footer-copyright-brand">
                             <span>&copy; 2026</span>
                             <Link className="footer-brand-link" to="/">
-                                <img src="/tcid-center-logo.png" alt="" aria-hidden="true" />
+                                <img src="/tcid-center-logo.png?v=2" alt="" aria-hidden="true" />
                                 <span>TCiD Center</span>
                             </Link>
                         </div>

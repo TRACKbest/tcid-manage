@@ -11,7 +11,7 @@ const About = () => {
                     <div className="d-flex align-items-center h-100">
                         <img
                             className="img-fluid rounded-3 w-100"
-                            src="/Etudiant.png"
+                            src="/Etudiant.png?v=2"
                             alt="À propos de TCiD Center"
                             style={{ aspectRatio: '4 / 3', objectFit: 'cover' }}
                         />

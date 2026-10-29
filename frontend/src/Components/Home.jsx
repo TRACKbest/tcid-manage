@@ -226,7 +226,7 @@ const Home = () => {
             <div className="col-lg-6" data-reveal>
               <div className="hm-about-visual">
                 <div className="hm-about-frame">
-                  <img src="/Etudiant.png" alt="Étudiant du TCiD Center" loading="lazy" />
+                  <img src="/Etudiant.png?v=2" alt="Étudiant du TCiD Center" loading="lazy" />
                 </div>
                 <div className="hm-about-badge">
                   <i className="bi bi-patch-check-fill" aria-hidden="true"></i>

@@ -108,7 +108,7 @@ const Header = () => {
     <nav className="navbar navbar-expand-lg bg-white navbar-light shadow sticky-top p-0">
         <Link to="/" className="navbar-brand d-flex align-items-center px-3 px-sm-4 px-xl-5">
           <img
-            src="/tcid-center-logo.png"
+            src="/tcid-center-logo.png?v=2"
             alt=""
             aria-hidden="true"
             className="me-2"
