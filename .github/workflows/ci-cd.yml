@@ -6,6 +6,15 @@ on:
   push:
     branches: ["main"]
 
+# Google Cloud identifiers. None of them is a secret: deployment is keyless
+# (Workload Identity Federation, restricted to this repository on main).
+env:
+  GCP_PROJECT_ID: tcidcenter
+  GCP_REGION: africa-south1
+  GCP_DEPLOY_SA: tcid-deployer@tcidcenter.iam.gserviceaccount.com
+  GCP_WIF_PROVIDER: projects/824299175311/locations/global/workloadIdentityPools/github/providers/github-oidc
+  REGISTRY: africa-south1-docker.pkg.dev/tcidcenter/tcid-repo
+
 permissions:
   contents: read
 
@@ -116,8 +125,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/tcid-repo
-      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.GKE_ENABLED == 'true' }}
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -141,13 +149,13 @@ jobs:
         if: env.PUBLISH == 'true'
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SA }}
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_DEPLOY_SA }}
 
       - name: Push to Artifact Registry
         if: env.PUBLISH == 'true'
         run: |
-          gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+          gcloud auth configure-docker "$GCP_REGION-docker.pkg.dev" --quiet
           for name in backend frontend; do
             docker tag "tcid-$name:ci" "$REGISTRY/$name:$GITHUB_SHA"
             docker push "$REGISTRY/$name:$GITHUB_SHA"
@@ -157,13 +165,11 @@ jobs:
     name: Deploy to GKE
     runs-on: ubuntu-latest
     needs: images
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.GKE_ENABLED == 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     environment: production
     permissions:
       contents: read
       id-token: write
-    env:
-      REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/tcid-repo
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -171,8 +177,8 @@ jobs:
       - name: Authenticate to Google Cloud (OIDC, no key)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SA }}
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_DEPLOY_SA }}
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
@@ -181,7 +187,7 @@ jobs:
         uses: google-github-actions/get-gke-credentials@v2
         with:
           cluster_name: tcid-cluster
-          location: ${{ vars.GCP_REGION }}
+          location: ${{ env.GCP_REGION }}
 
       - name: Sync secrets from Secret Manager
         run: |

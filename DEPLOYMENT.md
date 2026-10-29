@@ -44,9 +44,9 @@ gcloud secrets versions add tcid-google-oauth-client-secret --data-file=secret.t
 gcloud secrets versions add tcid-openai-api-key --data-file=key.txt
 ```
 
-In GitHub (*Settings → Secrets and variables → Actions → Variables*) set
-`GCP_PROJECT_ID`, `GCP_REGION`, `GCP_DEPLOY_SA`, `GCP_WIF_PROVIDER` and
-`GKE_ENABLED=true`. Every push to `main` then deploys.
+Nothing has to be configured in GitHub: the workflow carries the Google Cloud
+identifiers (none is secret) and authenticates through Workload Identity
+Federation. Every push to `main` deploys.
 
 DNS (Cloudflare): `A` records for `@` and `www` pointing to the `tcid-ip`
 address (`136.69.9.92`). Two supported modes:
