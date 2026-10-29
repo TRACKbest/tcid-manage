@@ -66,7 +66,8 @@ deploy() {
   for d in prosody jicofo jitsi-web jvb coturn; do kubectl -n tcid-meet rollout status "deployment/$d" --timeout=900s; done
 
   for path in /api/readyz/ /meet/config.js /meet/_health; do
-    kubectl -n tcid exec deploy/frontend -c nginx -- wget -q -O /dev/null "http://127.0.0.1:8080$path" &&
+    # "-O -" with a local redirect: Git Bash would rewrite a /dev/null argument.
+    kubectl -n tcid exec deploy/frontend -c nginx -- wget -q -O - "http://127.0.0.1:8080$path" > /dev/null &&
       echo "OK   $path" || echo "FAIL $path"
   done
 }

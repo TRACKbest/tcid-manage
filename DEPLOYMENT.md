@@ -49,7 +49,16 @@ In GitHub (*Settings → Secrets and variables → Actions → Variables*) set
 `GKE_ENABLED=true`. Every push to `main` then deploys.
 
 DNS (Cloudflare): `A` records for `@` and `www` pointing to the `tcid-ip`
-address, **DNS only** (grey cloud) so Google can issue the certificate.
+address (`136.69.9.92`). Two supported modes:
+
+- **DNS only** (grey cloud): Google issues and renews the `tcid-cert`
+  managed certificate by itself.
+- **Proxied** (orange cloud, SSL/TLS mode *Full*): Google cannot validate the
+  domain, so the load balancer serves an origin certificate stored in the
+  `tcid-origin-tls` secret (self-signed, valid one year), added to the
+  Ingress with
+  `kubectl -n tcid patch ingress tcid --type=merge -p '{"spec":{"tls":[{"secretName":"tcid-origin-tls"}]}}'`.
+  A Cloudflare Origin CA certificate can replace it to use *Full (strict)*.
 
 ## Daily operations
 
