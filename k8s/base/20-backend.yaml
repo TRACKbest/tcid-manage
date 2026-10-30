@@ -58,6 +58,9 @@ spec:
           # Zones without a node do not count by default: require two, so
           # Autopilot starts a node in a second zone.
           minDomains: 2
+          # Count only the pods of the same version, so a rolling update
+          # does not place the new replicas around the old ones.
+          matchLabelKeys: ["pod-template-hash"]
           labelSelector:
             matchLabels:
               app: backend
