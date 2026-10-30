@@ -18,6 +18,9 @@ spec:
       labels:
         app: postgres
     spec:
+      automountServiceAccountToken: false
+      # Time for a clean shutdown (checkpoint) instead of crash recovery.
+      terminationGracePeriodSeconds: 60
       securityContext:
         runAsNonRoot: true
         runAsUser: 70        # "postgres" user of the Alpine image
@@ -44,12 +47,20 @@ spec:
             # Sub-directory: the disk root holds "lost+found".
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
+          # Idle usage: 10m / 34Mi; fixed size, sized from the VPA.
           resources:
             requests:
-              cpu: 250m
-              memory: 512Mi
+              cpu: 100m
+              memory: 256Mi
             limits:
+              cpu: "1"
               memory: 1Gi
+          # Crash recovery after a hard stop can take a while: up to 5 min.
+          startupProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            periodSeconds: 5
+            failureThreshold: 60
           readinessProbe:
             exec:
               command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
@@ -57,8 +68,9 @@ spec:
           livenessProbe:
             exec:
               command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
-            initialDelaySeconds: 30
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -106,6 +118,7 @@ spec:
       labels:
         app: redis
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 999
@@ -120,16 +133,23 @@ spec:
           ports:
             - name: redis
               containerPort: 6379
+          # Idle usage: 9m / 6Mi (maxmemory 128mb caps the data).
           resources:
             requests:
-              cpu: 100m
-              memory: 192Mi
+              cpu: 50m
+              memory: 128Mi
             limits:
-              memory: 256Mi
+              cpu: 250m
+              memory: 192Mi
           readinessProbe:
             exec:
               command: ["redis-cli", "ping"]
             periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 20
+            failureThreshold: 3
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -171,6 +191,8 @@ metadata:
 spec:
   schedule: "0 2 * * *"
   timeZone: Indian/Antananarivo
+  # Written explicitly so a deployment re-enables a backup paused by stop-tcid.
+  suspend: false
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

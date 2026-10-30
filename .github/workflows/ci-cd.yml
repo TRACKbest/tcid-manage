@@ -5,6 +5,8 @@ on:
     branches: ["main"]
   push:
     branches: ["main"]
+  # Manual re-synchronisation of the cluster with main (Actions > Run workflow).
+  workflow_dispatch:
 
 # Google Cloud identifiers. None of them is a secret: deployment is keyless
 # (Workload Identity Federation, restricted to this repository on main).
@@ -117,6 +119,21 @@ jobs:
           ./kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0 rendered.yaml
           ./kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0 k8s/jobs/migrate.yaml
 
+      # DevSecOps: no credential committed (blocking). The Firebase web key is
+      # a public client identifier, restricted to the site in Google Cloud.
+      - name: Secret scan (Trivy)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:0.63.0 fs --scanners secret \
+            --skip-files /src/frontend/src/Components/firebase.js \
+            --exit-code 1 --no-progress /src
+
+      # Kubernetes and Dockerfile misconfigurations (report only: the Jitsi
+      # images need documented exceptions, see k8s/base/60-jitsi.yaml).
+      - name: Configuration scan (Trivy)
+        run: |
+          docker run --rm -v "$PWD:/src" aquasec/trivy:0.63.0 config \
+            --severity HIGH,CRITICAL --exit-code 0 /src/k8s /src/backend /src/frontend
+
   images:
     name: Build, scan and push images
     runs-on: ubuntu-latest
@@ -125,7 +142,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      PUBLISH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -165,7 +182,7 @@ jobs:
     name: Deploy to GKE
     runs-on: ubuntu-latest
     needs: images
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     environment: production
     permissions:
       contents: read
@@ -217,12 +234,47 @@ jobs:
           kubectl -n tcid-meet create secret generic jitsi-secrets --from-file="$dir/meet" --dry-run=client -o yaml | kubectl apply -f -
           rm -rf "$dir"
 
+      # Images running before this deployment, used by the rollback step.
+      - name: Record current version
+        id: previous
+        run: |
+          image=$(kubectl -n tcid get deployment backend -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+          echo "tag=${image##*:}" >> "$GITHUB_OUTPUT"
+          echo "Running before deployment: ${image:-none}"
+
       - name: Apply manifests (images pinned to this commit)
+        id: apply
         working-directory: k8s/overlays/prod
         run: |
           sed -i "s/newTag: latest/newTag: $GITHUB_SHA/" kustomization.yaml
+          # The manifests no longer set the web replica count (the HPA does):
+          # forget the old value so apply does not drop the pods to 1.
+          for d in backend frontend; do
+            if kubectl -n tcid apply view-last-applied "deployment/$d" -o json 2>/dev/null | jq -e '.spec.replicas' >/dev/null; then
+              kubectl -n tcid apply view-last-applied "deployment/$d" -o json | jq 'del(.spec.replicas)' | kubectl -n tcid apply set-last-applied -f -
+            fi
+          done
           kubectl apply -k .
           kubectl -n tcid rollout status statefulset/postgres --timeout=300s
+          # The autoscalers own the web pod count: wake them up if
+          # stop-tcid.sh had put the platform to sleep.
+          for d in backend frontend; do
+            if [ "$(kubectl -n tcid get deployment "$d" -o jsonpath='{.spec.replicas}')" = 0 ]; then
+              kubectl -n tcid scale deployment "$d" --replicas=2
+            fi
+          done
+
+      # Migrations change the schema: take a backup first and stop if it fails.
+      - name: Back up the database
+        run: |
+          job="pre-deploy-${GITHUB_SHA::7}-$GITHUB_RUN_ATTEMPT"
+          kubectl -n tcid create job "$job" --from=cronjob/postgres-backup
+          if ! kubectl -n tcid wait --for=condition=complete "job/$job" --timeout=600s; then
+            kubectl -n tcid logs "job/$job" --tail=50 || true
+            exit 1
+          fi
+          kubectl -n tcid logs "job/$job" | tail -1
+          kubectl -n tcid delete job "$job" --wait=false
 
       - name: Run database migrations
         run: |
@@ -263,3 +315,18 @@ jobs:
             kubectl -n tcid-meet logs deploy/jvb --tail=50 || true
             exit 1
           fi
+
+      # Any failure after the new manifests were applied puts the previous
+      # images back. Migrations are not reverted: they must stay compatible
+      # with the previous version (add columns, never drop them in one step).
+      - name: Roll back on failure
+        if: failure() && steps.apply.outcome != 'skipped' && steps.previous.outputs.tag != ''
+        env:
+          PREVIOUS: ${{ steps.previous.outputs.tag }}
+        run: |
+          echo "Deployment failed: back to $PREVIOUS"
+          kubectl -n tcid set image deployment/backend backend="$REGISTRY/backend:$PREVIOUS"
+          kubectl -n tcid set image deployment/frontend nginx="$REGISTRY/frontend:$PREVIOUS" collectstatic="$REGISTRY/backend:$PREVIOUS"
+          kubectl -n tcid rollout status deployment/backend --timeout=600s
+          kubectl -n tcid rollout status deployment/frontend --timeout=600s
+          kubectl get pods -n tcid

@@ -6,7 +6,10 @@
 #   DRY_RUN=1 ./infra/start-tcid.sh    # show what would happen, change nothing
 #
 # Replica counts match k8s/base (the autoscalers take over from there).
+# Load balancers released by "stop-tcid.sh --deep" are recreated first.
 set -euo pipefail
+
+root=$(cd "$(dirname "$0")/.." && pwd)
 
 SITE=${SITE:-https://tcid-madagascar.com}
 dry=()
@@ -15,6 +18,9 @@ step() { printf '\n==> %s\n' "$*"; }
 wait_rollout() { [ ${#dry[@]} -gt 0 ] || kubectl -n "$1" rollout status "$2" --timeout=900s; }
 
 kubectl cluster-info >/dev/null || { echo "kubectl cannot reach the cluster (run: gcloud container clusters get-credentials tcid-cluster --location=africa-south1)" >&2; exit 1; }
+
+step "0/5 Load balancers (no change if they are already there)"
+kubectl kustomize "$root/k8s/overlays/prod" | kubectl apply -l app.kubernetes.io/component=edge -f - "${dry[@]}"
 
 step "1/5 PostgreSQL and Redis"
 kubectl -n tcid scale statefulset/postgres --replicas=1 "${dry[@]}"
@@ -43,9 +49,10 @@ kubectl -n tcid patch cronjob postgres-backup "${dry[@]}" -p '{"spec":{"suspend"
 
 step "Checking the public site (the load balancer may need a minute)"
 ok=1
+# Up to 10 minutes: a load balancer rebuilt after --deep needs that long.
 for path in / /api/readyz/ /meet/config.js /meet/_health; do
   code=000
-  for attempt in $(seq 1 18); do
+  for attempt in $(seq 1 60); do
     code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$SITE$path") || true
     [ "$code" = 200 ] && break
     sleep 10

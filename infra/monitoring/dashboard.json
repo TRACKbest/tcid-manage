@@ -1,0 +1,168 @@
+{
+  "displayName": "TCiD Center - GKE autoscaling",
+  "mosaicLayout": {
+    "columns": 48,
+    "tiles": [
+      {
+        "xPos": 0,
+        "yPos": 0,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "CPU used per pod (cores)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (pod_name) (rate(kubernetes_io:container_cpu_core_usage_time{monitored_resource=\"k8s_container\",namespace_name=~\"tcid|tcid-meet\"}[5m]))"
+                },
+                "plotType": "LINE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 0,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Memory used per pod (bytes)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (pod_name) (kubernetes_io:container_memory_used_bytes{monitored_resource=\"k8s_container\",namespace_name=~\"tcid|tcid-meet\",memory_type=\"non-evictable\"})"
+                },
+                "plotType": "LINE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 16,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "HPA: current vs desired replicas",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (horizontalpodautoscaler, __name__) ({__name__=~\"kube_horizontalpodautoscaler_status_(current|desired)_replicas\", namespace=\"tcid\"})"
+                },
+                "plotType": "LINE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 16,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Available replicas per deployment",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (deployment) (kube_deployment_status_replicas_available{namespace=~\"tcid|tcid-meet\"})"
+                },
+                "plotType": "LINE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 32,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "CPU requested vs used (cores)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum(kubernetes_io:container_cpu_request_cores{monitored_resource=\"k8s_container\",namespace_name=~\"tcid|tcid-meet\"})"
+                },
+                "plotType": "LINE",
+                "legendTemplate": "requested (billed)"
+              },
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum(rate(kubernetes_io:container_cpu_core_usage_time{monitored_resource=\"k8s_container\",namespace_name=~\"tcid|tcid-meet\"}[5m]))"
+                },
+                "plotType": "LINE",
+                "legendTemplate": "used"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 32,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "VPA recommended CPU per container (cores)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "max by (container_name) (kubernetes_io:autoscaler_container_cpu_per_replica_recommended_request_cores{namespace_name=~\"tcid|tcid-meet\"})"
+                },
+                "plotType": "LINE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 0,
+        "yPos": 48,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "VPA recommended memory per container (bytes)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "max by (container_name) (kubernetes_io:autoscaler_container_memory_per_replica_recommended_request_bytes{namespace_name=~\"tcid|tcid-meet\"})"
+                },
+                "plotType": "LINE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "xPos": 24,
+        "yPos": 48,
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Container restarts (auto-healing)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "prometheusQuery": "sum by (container_name) (increase(kubernetes_io:container_restart_count{monitored_resource=\"k8s_container\",namespace_name=~\"tcid|tcid-meet\"}[1h]))"
+                },
+                "plotType": "LINE"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

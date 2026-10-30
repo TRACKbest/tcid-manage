@@ -12,8 +12,9 @@ metadata:
   labels:
     app: frontend
 spec:
-  replicas: 2
+  # No "replicas": the HorizontalPodAutoscaler owns the pod count.
   revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -28,8 +29,17 @@ spec:
         app: frontend
       annotations:
         gke-gcsfuse/volumes: "true"
+        # Read-only mount: a small sidecar without scratch space is enough.
+        gke-gcsfuse/cpu-request: 50m
+        gke-gcsfuse/cpu-limit: 250m
+        gke-gcsfuse/memory-request: 64Mi
+        gke-gcsfuse/memory-limit: 256Mi
+        gke-gcsfuse/ephemeral-storage-request: 1Gi
+        gke-gcsfuse/ephemeral-storage-limit: 1Gi
     spec:
       serviceAccountName: frontend
+      # Longer than the load balancer's 30 s connection draining.
+      terminationGracePeriodSeconds: 45
       securityContext:
         runAsNonRoot: true
         runAsUser: 101
@@ -40,6 +50,12 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: frontend
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
@@ -61,7 +77,10 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              cpu: 100m
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
               memory: 256Mi
           volumeMounts:
             - name: static
@@ -81,12 +100,19 @@ spec:
               value: http://jitsi-web.tcid-meet.svc.cluster.local:8000
             - name: JICOFO_UPSTREAM
               value: http://jicofo.tcid-meet.svc.cluster.local:8888
+          # Idle usage: 1m / 9Mi.
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
-              memory: 256Mi
+              cpu: 500m
+              memory: 128Mi
+          # The NEG removes the pod from the load balancer before nginx stops.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "15"]
           livenessProbe:
             httpGet:
               path: /healthz

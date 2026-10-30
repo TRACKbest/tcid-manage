@@ -5,6 +5,7 @@
 #   ./infra/setup-gcp.sh cluster    # GKE Autopilot cluster (about 10 minutes)
 #   ./infra/setup-gcp.sh workload   # bucket access for the pods (after the cluster)
 #   ./infra/setup-gcp.sh outputs    # values to copy into GitHub and the overlay
+#   ./infra/setup-gcp.sh observe    # cost-aware monitoring, dashboard, image cleanup
 #
 # Security choices: no service-account key anywhere (GitHub uses OIDC through
 # Workload Identity Federation, pods use Workload Identity), secrets generated
@@ -129,6 +130,35 @@ workload() {
   echo "done"
 }
 
+observe() {
+  step "Cluster metrics: system, kube-state (pods, deployments, HPA) and storage"
+  # cAdvisor/kubelet (duplicates of the system metrics), GPU (DCGM) and JobSet
+  # packages are billed per sample and not needed here.
+  gcloud container clusters update "$CLUSTER" --location="$REGION" \
+    --monitoring=SYSTEM,POD,DEPLOYMENT,STATEFULSET,DAEMONSET,HPA,STORAGE
+
+  step "Cloud Monitoring dashboard (CPU/RAM, replicas, HPA, VPA, restarts)"
+  dashboard="$(dirname "$0")/monitoring/dashboard.json"
+  name="TCiD Center - GKE autoscaling"   # displayName in dashboard.json
+  if [ -z "$(gcloud monitoring dashboards list --filter="displayName=\"$name\"" --format='value(name)')" ]; then
+    gcloud monitoring dashboards create --config-from-file="$dashboard"
+  else
+    echo "already there: $name"
+  fi
+
+  step "Artifact Registry cleanup: keep the 10 latest images of each kind"
+  policy=$(mktemp)
+  cat > "$policy" <<'JSON'
+[
+  {"name": "keep-latest", "action": {"type": "Keep"}, "mostRecentVersions": {"keepCount": 10}},
+  {"name": "delete-old", "action": {"type": "Delete"}, "condition": {"olderThan": "30d"}}
+]
+JSON
+  gcloud artifacts repositories set-cleanup-policies "$REPO" --location="$REGION" \
+    --policy="$policy" --no-dry-run
+  rm -f "$policy"
+}
+
 outputs() {
   step "GitHub repository variables (Settings > Secrets and variables > Actions > Variables)"
   echo "GCP_PROJECT_ID   = $PROJECT_ID"
@@ -148,5 +178,6 @@ case "${1:-base}" in
   cluster) cluster ;;
   workload) workload ;;
   outputs) outputs ;;
-  *) echo "usage: $0 [base|cluster|workload|outputs]" >&2; exit 2 ;;
+  observe) observe ;;
+  *) echo "usage: $0 [base|cluster|workload|outputs|observe]" >&2; exit 2 ;;
 esac

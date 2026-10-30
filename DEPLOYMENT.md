@@ -83,7 +83,23 @@ pod to zero; `start` brings PostgreSQL, Redis, the API, Jitsi and nginx back
 in order, resumes the backup and checks the public site. Disks, buckets,
 secrets, IPs, load balancers and certificates are never touched, and the
 pipeline is unaffected (a push while asleep redeploys and wakes the site up).
-`DRY_RUN=1` shows the actions without applying them.
+`DRY_RUN=1` shows the actions without applying them. `stop-tcid.sh --deep`
+also releases the three load balancers (their hourly forwarding-rule fee);
+the static IPs stay reserved and `start-tcid.sh` rebuilds them, which takes
+about 10 minutes instead of 2.
+
+### Autoscaling, resilience, load test
+
+The HPAs own the web pod count (manifests set no `replicas`), every workload
+has a VPA in recommendation mode, and the pipeline backs up the database
+before migrations and rolls back the images when a deployment fails. A daily
+workflow (`drift.yml`) compares the cluster with `main`. Details, procedures
+and the target architecture: [docs/AUTOSCALING-RESILIENCE.md](docs/AUTOSCALING-RESILIENCE.md).
+
+```bash
+./infra/load-test.sh            # 150 virtual users for 8 minutes, watch the HPAs
+./infra/setup-gcp.sh observe    # metrics packages, dashboard, image cleanup
+```
 
 Cloud Armor (rate limiting) is ready in `infra/setup-gcp.sh` but needs a
 `SECURITY_POLICIES` quota increase on new projects; then add

@@ -56,6 +56,7 @@ spec:
       labels:
         app: prosody
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: prosody
           image: ghcr.io/jitsi/prosody:stable-11146-2
@@ -88,16 +89,29 @@ spec:
             - { name: xmpp-c2s, containerPort: 5222 }
             - { name: xmpp-component, containerPort: 5347 }
             - { name: bosh, containerPort: 5280 }
+          # Requests below come from real usage (kubectl top / VPA): idle
+          # values are tiny, limits leave room to burst during a class.
           resources:
             requests:
-              cpu: 250m
-              memory: 512Mi
+              cpu: 50m
+              memory: 128Mi
             limits:
-              memory: 1Gi
+              cpu: 500m
+              memory: 512Mi
+          startupProbe:
+            tcpSocket:
+              port: 5222
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             tcpSocket:
               port: 5222
             periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5222
+            periodSeconds: 20
+            failureThreshold: 3
           volumeMounts:
             - name: data
               mountPath: /var/lib/prosody
@@ -137,6 +151,7 @@ spec:
       labels:
         app: jicofo
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: jicofo
           image: ghcr.io/jitsi/jicofo:stable-11146-2
@@ -150,6 +165,9 @@ spec:
               value: "1"
             - name: JICOFO_ENABLE_HEALTH_CHECKS
               value: "1"
+            # Java heap kept below the container memory limit.
+            - name: JICOFO_MAX_MEMORY
+              value: 768m
             - name: JWT_APP_SECRET
               valueFrom:
                 secretKeyRef: { name: jitsi-secrets, key: JITSI_JWT_SECRET }
@@ -160,16 +178,28 @@ spec:
             - { name: rest, containerPort: 8888 }
           resources:
             requests:
-              cpu: 250m
-              memory: 768Mi
+              cpu: 100m
+              memory: 512Mi
             limits:
-              memory: 1536Mi
+              cpu: "1"
+              memory: 1Gi
+          startupProbe:
+            tcpSocket:
+              port: rest
+            periodSeconds: 5
+            failureThreshold: 36
           readinessProbe:
             httpGet:
               path: /about/health
               port: rest
-            initialDelaySeconds: 30
             periodSeconds: 15
+          # TCP only: /about/health also fails when the bridge is down, and
+          # restarting jicofo would not fix the bridge.
+          livenessProbe:
+            tcpSocket:
+              port: rest
+            periodSeconds: 30
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service
@@ -199,6 +229,7 @@ spec:
       labels:
         app: jitsi-web
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: web
           image: ghcr.io/jitsi/web:stable-11146-2
@@ -220,15 +251,23 @@ spec:
             - { name: http, containerPort: 8000 }
           resources:
             requests:
-              cpu: 100m
-              memory: 256Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
-              memory: 512Mi
+              cpu: 250m
+              memory: 256Mi
           readinessProbe:
             httpGet:
               path: /meet/config.js
               port: http
             periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /meet/config.js
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 3
           volumeMounts:
             - name: web-files
               mountPath: /usr/share/jitsi-meet/base.html
@@ -268,7 +307,11 @@ spec:
     metadata:
       labels:
         app: jvb
+      annotations:
+        # Evicting the bridge to pack nodes would cut every live class.
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: jvb
           image: ghcr.io/jitsi/jvb:stable-11146-2
@@ -277,6 +320,7 @@ spec:
                 name: jitsi-common
           env:
             - { name: JVB_PORT, value: "10000" }
+            - { name: VIDEOBRIDGE_MAX_MEMORY, value: 1280m }
             - name: JVB_ADVERTISE_IPS
               valueFrom:
                 configMapKeyRef: { name: jitsi-network, key: JVB_IP }
@@ -286,12 +330,15 @@ spec:
           ports:
             - { name: media, containerPort: 10000, protocol: UDP }
             - { name: colibri, containerPort: 8080 }
+          # The only CPU-heavy Jitsi part (forwards every video stream): a
+          # guaranteed half core, bursting to 2 cores during large classes.
           resources:
             requests:
-              cpu: "1"
-              memory: 1536Mi
+              cpu: 500m
+              memory: 1Gi
             limits:
-              memory: 3Gi
+              cpu: "2"
+              memory: 2Gi
           readinessProbe:
             httpGet:
               path: /about/health
@@ -310,6 +357,8 @@ kind: Service
 metadata:
   name: jvb
   namespace: tcid-meet
+  labels:
+    app.kubernetes.io/component: edge
   annotations:
     cloud.google.com/l4-rbs: "enabled"
 spec:
@@ -341,6 +390,7 @@ spec:
       labels:
         app: coturn
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
@@ -378,14 +428,20 @@ spec:
             - { name: turn-tcp, containerPort: 3478, protocol: TCP }
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 50m
+              memory: 64Mi
             limits:
+              cpu: 500m
               memory: 256Mi
           readinessProbe:
             tcpSocket:
               port: 3478
             periodSeconds: 15
+          livenessProbe:
+            tcpSocket:
+              port: 3478
+            periodSeconds: 30
+            failureThreshold: 3
           securityContext:
             # turnserver carries a file capability: keep only that one.
             capabilities:
@@ -397,6 +453,8 @@ kind: Service
 metadata:
   name: coturn
   namespace: tcid-meet
+  labels:
+    app.kubernetes.io/component: edge
 spec:
   type: LoadBalancer
   loadBalancerIP: TURN_IP_PLACEHOLDER

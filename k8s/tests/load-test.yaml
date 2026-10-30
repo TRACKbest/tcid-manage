@@ -1,0 +1,91 @@
+# Load test run inside the cluster (not part of the deployed manifests):
+# k6 sends traffic to nginx -> Django -> PostgreSQL, so both HPAs react.
+# Driven by infra/load-test.sh, which deletes everything afterwards.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: load-test
+  namespace: tcid
+data:
+  script.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+
+    // Ramp up to 150 virtual users, hold, then ramp down (8 minutes).
+    export const options = {
+      stages: [
+        { duration: '1m', target: 50 },
+        { duration: '1m', target: 150 },
+        { duration: '5m', target: 150 },
+        { duration: '1m', target: 0 },
+      ],
+      thresholds: { http_req_failed: ['rate<0.01'], http_req_duration: ['p(95)<1500'] },
+    };
+
+    const base = 'http://frontend.tcid.svc.cluster.local';
+    const params = { headers: { Host: 'tcid-madagascar.com', 'X-Forwarded-Proto': 'https' } };
+
+    export default function () {
+      for (const path of ['/api/course/', '/api/category/', '/']) {
+        const res = http.get(base + path, params);
+        check(res, { 'status 200': (r) => r.status === 200 });
+      }
+      sleep(0.5);
+    }
+---
+# nginx only accepts the Google load balancer: open it to the test pod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-from-load-test
+  namespace: tcid
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: load-test
+      ports:
+        - { port: 8080, protocol: TCP }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-test
+  namespace: tcid
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: load-test
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 12345
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: k6
+          image: grafana/k6:0.52.0
+          args: ["run", "--summary-trend-stats=avg,p(95),max", "/scripts/script.js"]
+          resources:
+            requests:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: load-test

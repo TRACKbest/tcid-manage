@@ -1,6 +1,15 @@
-# Horizontal autoscaling (more pods above 70 % CPU), vertical recommendations
-# (VPA in "Off" mode only advises on requests), and disruption budgets so
-# node upgrades never take every replica down at once.
+# Autoscaling and availability.
+#
+# - HPA (horizontal): backend 2-10 and frontend 2-6 pods, on CPU 70 % and
+#   memory 80 % of the requests. Scale-up is fast but capped, scale-down waits
+#   5 minutes and removes one pod at a time, so the count does not oscillate.
+# - VPA (vertical) in "Off" mode for every workload: it only publishes
+#   recommendations (kubectl describe vpa) that are copied into the requests
+#   in Git, so the cluster never drifts from the repository and never fights
+#   the HPA. PostgreSQL, Redis and Jitsi keep a fixed pod count.
+# - PDB: node upgrades always keep one backend and one frontend pod.
+# Redis (in-memory channel layer) and the videobridge (a conference is pinned
+# to its bridge, behind one UDP address) are deliberately not scaled out.
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -20,9 +29,24 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
   behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Max
+      policies:
+        - { type: Pods, value: 2, periodSeconds: 60 }
+        - { type: Percent, value: 100, periodSeconds: 60 }
     scaleDown:
       stabilizationWindowSeconds: 300
+      selectPolicy: Min
+      policies:
+        - { type: Pods, value: 1, periodSeconds: 120 }
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -43,6 +67,24 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Max
+      policies:
+        - { type: Pods, value: 2, periodSeconds: 60 }
+        - { type: Percent, value: 100, periodSeconds: 60 }
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      selectPolicy: Min
+      policies:
+        - { type: Pods, value: 1, periodSeconds: 120 }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -54,6 +96,110 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: backend
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: frontend
+  namespace: tcid
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: postgres
+  namespace: tcid
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: postgres
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: redis
+  namespace: tcid
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: redis
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: prosody
+  namespace: tcid-meet
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: prosody
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: jicofo
+  namespace: tcid-meet
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jicofo
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: jitsi-web
+  namespace: tcid-meet
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jitsi-web
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: jvb
+  namespace: tcid-meet
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jvb
+  updatePolicy:
+    updateMode: "Off"
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: coturn
+  namespace: tcid-meet
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: coturn
   updatePolicy:
     updateMode: "Off"
 ---

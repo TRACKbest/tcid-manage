@@ -12,8 +12,10 @@ metadata:
   labels:
     app: backend
 spec:
-  replicas: 2
+  # No "replicas": the HorizontalPodAutoscaler owns the pod count, so a
+  # deployment never resets it (stop/start scale to 0 and back to 2).
   revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -31,8 +33,15 @@ spec:
         # Cloud Storage FUSE sidecar: uploaded videos and documents live in a
         # bucket shared by every replica instead of a node-local disk.
         gke-gcsfuse/volumes: "true"
+        # Sized from real usage (the default sidecar reserves 250m / 256Mi);
+        # the 5 GiB default scratch space is kept for large video uploads.
+        gke-gcsfuse/cpu-request: 50m
+        gke-gcsfuse/cpu-limit: 500m
+        gke-gcsfuse/memory-request: 128Mi
+        gke-gcsfuse/memory-limit: 512Mi
     spec:
       serviceAccountName: backend
+      terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -40,9 +49,17 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      # Replicas in different zones (Autopilot bills pods, not nodes, so
+      # spreading costs nothing) and, inside a zone, on different nodes.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: backend
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
@@ -59,12 +76,20 @@ spec:
                 name: tcid-config
             - secretRef:
                 name: tcid-secrets
+          # Requests from the VPA recommendation (idle: 4m / 142Mi) with
+          # headroom; the CPU limit lets a pod burst while the HPA adds pods.
           resources:
             requests:
-              cpu: 250m
-              memory: 512Mi
+              cpu: 150m
+              memory: 384Mi
             limits:
+              cpu: "1"
               memory: 1Gi
+          # Leave the load balancer time to stop sending requests.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
           startupProbe:
             httpGet:
               path: /api/healthz/
@@ -82,6 +107,8 @@ spec:
                 - name: Host
                   value: localhost
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /api/readyz/
