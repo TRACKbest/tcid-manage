@@ -71,6 +71,20 @@ kubectl -n tcid rollout undo deployment/backend   # roll back
 kubectl -n tcid create job --from=cronjob/postgres-backup manual-backup
 ```
 
+### Sleep at night, wake up in the morning
+
+```bash
+./infra/stop-tcid.sh     # PowerShell: .\infra\stop-tcid.ps1
+./infra/start-tcid.sh    # PowerShell: .\infra\start-tcid.ps1
+```
+
+`stop` takes a safety backup, pauses the nightly backup and scales every
+pod to zero; `start` brings PostgreSQL, Redis, the API, Jitsi and nginx back
+in order, resumes the backup and checks the public site. Disks, buckets,
+secrets, IPs, load balancers and certificates are never touched, and the
+pipeline is unaffected (a push while asleep redeploys and wakes the site up).
+`DRY_RUN=1` shows the actions without applying them.
+
 Cloud Armor (rate limiting) is ready in `infra/setup-gcp.sh` but needs a
 `SECURITY_POLICIES` quota increase on new projects; then add
 `securityPolicy: {name: tcid-armor}` to the BackendConfig.
