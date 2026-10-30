@@ -51,6 +51,9 @@ spec:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
           whenUnsatisfiable: DoNotSchedule
+          # Zones without a node do not count by default: require two, so
+          # Autopilot starts a node in a second zone.
+          minDomains: 2
           labelSelector:
             matchLabels:
               app: frontend
