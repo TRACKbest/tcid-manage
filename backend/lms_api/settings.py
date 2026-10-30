@@ -159,6 +159,16 @@ DATABASES = {
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'admin'),
         'HOST': os.environ.get('POSTGRES_HOST', '127.0.0.1'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        # Under ASGI each request runs in its own thread and Django cannot
+        # reuse those connections: a pool per process caps them instead
+        # (10 backend pods x 8 = 80, below PostgreSQL's 100 connections).
+        'OPTIONS': {
+            'pool': {
+                'min_size': 1,
+                'max_size': int(os.environ.get('DB_POOL_MAX_SIZE', '8')),
+                'timeout': 20,
+            },
+        },
     }
 }
 
