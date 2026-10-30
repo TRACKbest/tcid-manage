@@ -129,10 +129,11 @@ jobs:
 
       # Kubernetes and Dockerfile misconfigurations (report only: the Jitsi
       # images need documented exceptions, see k8s/base/60-jitsi.yaml).
+      # "trivy config" takes a single directory: the whole repository.
       - name: Configuration scan (Trivy)
         run: |
           docker run --rm -v "$PWD:/src" aquasec/trivy:0.63.0 config \
-            --severity HIGH,CRITICAL --exit-code 0 /src/k8s /src/backend /src/frontend
+            --severity HIGH,CRITICAL --exit-code 0 /src
 
   images:
     name: Build, scan and push images
