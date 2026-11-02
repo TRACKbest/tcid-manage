@@ -55,10 +55,11 @@ diagnose() {
   if [ "$quota" = 1 ]; then
     cat >&2 <<'EOF'
 
-  Google Cloud refused to create a node: quota exceeded (usually
-  "Persistent Disk SSD (GB)" in africa-south1). Console: IAM & Admin >
-  Quotas & system limits > filter "Persistent Disk SSD" > Edit quota (500 GB).
-  The site already works with the pods that are running.
+  Google Cloud refused an extra node: the 250 GB SSD quota of africa-south1
+  holds a single node. The site works with the pods already running; the
+  waiting ones start as soon as room frees up. If the site itself is down,
+  run ./infra/stop-tcid.sh --no-backup then this script again: everything is
+  then requested at once and fits on one node.
 EOF
   fi
 }
@@ -68,24 +69,26 @@ kubectl cluster-info >/dev/null || { echo "kubectl cannot reach the cluster (run
 step "0/5 Load balancers (no change if they are already there)"
 kubectl kustomize "$root/k8s/overlays/prod" | kubectl apply -l app.kubernetes.io/component=edge -f - "${dry[@]}"
 
-step "1/5 PostgreSQL and Redis (the first node may take a few minutes)"
-kubectl -n tcid scale statefulset/postgres --replicas=1 "${dry[@]}"
-kubectl -n tcid scale deployment/redis --replicas=1 "${dry[@]}"
+# Every pod is requested at once: Autopilot then sizes ONE node for all of
+# them. Started one service at a time, it would build a small node first and
+# need a second one later, which the project's 250 GB SSD quota (about
+# 160 GB per node) cannot hold. The services wait for each other on their
+# own (readiness probes, reconnections), and the checks below follow the
+# dependency order.
+step "1/5 Requesting every service (one node is created, a few minutes)"
+kubectl -n tcid scale statefulset/postgres deployment/redis --replicas=1 "${dry[@]}"
+kubectl -n tcid scale deployment/backend deployment/frontend --replicas=2 "${dry[@]}"
+kubectl -n tcid-meet scale deployment/prosody deployment/jicofo deployment/jvb deployment/jitsi-web deployment/coturn --replicas=1 "${dry[@]}"
+
+step "2/5 PostgreSQL and Redis"
 wait_ready tcid statefulset/postgres 1
 wait_ready tcid deployment/redis 1
 
-step "2/5 API (backend)"
-kubectl -n tcid scale deployment/backend --replicas=2 "${dry[@]}"
+step "3/5 API (backend)"
 wait_ready tcid deployment/backend 1
 
-step "3/5 Virtual classroom (prosody first: the others connect to it)"
-kubectl -n tcid-meet scale deployment/prosody --replicas=1 "${dry[@]}"
-wait_ready tcid-meet deployment/prosody 1
-kubectl -n tcid-meet scale deployment/jicofo deployment/jvb deployment/jitsi-web deployment/coturn --replicas=1 "${dry[@]}"
-for d in jicofo jvb jitsi-web coturn; do wait_ready tcid-meet "deployment/$d" 1; done
-
-step "4/5 Web entry point (frontend)"
-kubectl -n tcid scale deployment/frontend --replicas=2 "${dry[@]}"
+step "4/5 Virtual classroom, then the web entry point"
+for d in prosody jicofo jvb jitsi-web coturn; do wait_ready tcid-meet "deployment/$d" 1; done
 wait_ready tcid deployment/frontend 1
 
 step "5/5 Nightly backup resumed"
