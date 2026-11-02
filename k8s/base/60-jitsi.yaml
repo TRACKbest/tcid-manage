@@ -307,9 +307,6 @@ spec:
     metadata:
       labels:
         app: jvb
-      annotations:
-        # Evicting the bridge to pack nodes would cut every live class.
-        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
     spec:
       automountServiceAccountToken: false
       containers:

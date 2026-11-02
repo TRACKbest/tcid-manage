@@ -54,10 +54,9 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: DoNotSchedule
-          # Zones without a node do not count by default: require two, so
-          # Autopilot starts a node in a second zone.
-          minDomains: 2
+          # Preferred, not required: a new zone needs a new node, and the
+          # project's disk quota (SSD_TOTAL_GB) may not allow one.
+          whenUnsatisfiable: ScheduleAnyway
           # Count only the pods of the same version, so a rolling update
           # does not place the new replicas around the old ones.
           matchLabelKeys: ["pod-template-hash"]
