@@ -1,12 +1,16 @@
 # Autoscaling and availability.
 #
-# - HPA (horizontal): backend 2-10 and frontend 2-6 pods, on CPU 70 % and
-#   memory 80 % of the requests. Scale-up is fast but capped, scale-down waits
-#   5 minutes and removes one pod at a time, so the count does not oscillate.
-# - VPA (vertical) in "Off" mode for every workload: it only publishes
-#   recommendations (kubectl describe vpa) that are copied into the requests
-#   in Git, so the cluster never drifts from the repository and never fights
-#   the HPA. PostgreSQL, Redis and Jitsi keep a fixed pod count.
+# - HPA (horizontal): backend 2-10 and frontend 2-6 pods, on CPU 70 % of the
+#   requests. Scale-up is fast but capped, scale-down waits 5 minutes and
+#   removes one pod at a time, so the count does not oscillate.
+# - VPA (vertical) in automatic mode ("InPlaceOrRecreate": the pod is resized
+#   in place when possible, recreated otherwise), within minAllowed/maxAllowed.
+#   It never controls the resource the HPA scales on: on backend and frontend
+#   the HPA owns CPU and the VPA owns memory only (multidimensional pattern);
+#   the other workloads have no HPA and get both. Limits stay those of the
+#   manifests (RequestsOnly), and maxAllowed keeps every request under them.
+# - PostgreSQL and the videobridge keep minReplicas 2 (VPA default): VPA never
+#   evicts their single pod; new sizes apply in place or at the next restart.
 # - PDB: node upgrades always keep one backend and one frontend pod.
 # Redis (in-memory channel layer) and the videobridge (a conference is pinned
 # to its bridge, behind one UDP address) are deliberately not scaled out.
@@ -29,12 +33,6 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 60
@@ -67,12 +65,6 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 60
@@ -97,7 +89,17 @@ spec:
     kind: Deployment
     name: backend
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: backend
+        controlledResources: [memory]
+        controlledValues: RequestsOnly
+        minAllowed: { memory: 256Mi }
+        maxAllowed: { memory: 1Gi }
+      - containerName: gke-gcsfuse-sidecar
+        mode: "Off"
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -110,7 +112,17 @@ spec:
     kind: Deployment
     name: frontend
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: nginx
+        controlledResources: [memory]
+        controlledValues: RequestsOnly
+        minAllowed: { memory: 48Mi }
+        maxAllowed: { memory: 128Mi }
+      - containerName: gke-gcsfuse-sidecar
+        mode: "Off"
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -123,7 +135,13 @@ spec:
     kind: StatefulSet
     name: postgres
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+  resourcePolicy:
+    containerPolicies:
+      - containerName: postgres
+        controlledValues: RequestsOnly
+        minAllowed: { cpu: 100m, memory: 128Mi }
+        maxAllowed: { cpu: "1", memory: 1Gi }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -136,7 +154,14 @@ spec:
     kind: Deployment
     name: redis
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: redis
+        controlledValues: RequestsOnly
+        minAllowed: { cpu: 50m, memory: 64Mi }
+        maxAllowed: { cpu: 250m, memory: 192Mi }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -149,7 +174,14 @@ spec:
     kind: Deployment
     name: prosody
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: prosody
+        controlledValues: RequestsOnly
+        minAllowed: { cpu: 50m, memory: 96Mi }
+        maxAllowed: { cpu: 500m, memory: 512Mi }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -162,7 +194,14 @@ spec:
     kind: Deployment
     name: jicofo
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: jicofo
+        controlledValues: RequestsOnly
+        minAllowed: { cpu: 50m, memory: 384Mi }
+        maxAllowed: { cpu: "1", memory: 1Gi }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -175,7 +214,14 @@ spec:
     kind: Deployment
     name: jitsi-web
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: web
+        controlledValues: RequestsOnly
+        minAllowed: { cpu: 50m, memory: 64Mi }
+        maxAllowed: { cpu: 250m, memory: 256Mi }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -188,7 +234,13 @@ spec:
     kind: Deployment
     name: jvb
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+  resourcePolicy:
+    containerPolicies:
+      - containerName: jvb
+        controlledValues: RequestsOnly
+        minAllowed: { cpu: 250m, memory: 512Mi }
+        maxAllowed: { cpu: "2", memory: 2Gi }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
@@ -201,7 +253,14 @@ spec:
     kind: Deployment
     name: coturn
   updatePolicy:
-    updateMode: "Off"
+    updateMode: InPlaceOrRecreate
+    minReplicas: 1
+  resourcePolicy:
+    containerPolicies:
+      - containerName: coturn
+        controlledValues: RequestsOnly
+        minAllowed: { cpu: 50m, memory: 64Mi }
+        maxAllowed: { cpu: 500m, memory: 256Mi }
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

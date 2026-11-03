@@ -91,7 +91,7 @@ about 10 minutes instead of 2.
 ### Autoscaling, resilience, load test
 
 The HPAs own the web pod count (manifests set no `replicas`), every workload
-has a VPA in recommendation mode, and the pipeline backs up the database
+has a VPA in automatic mode (in-place resize; memory only where an HPA owns CPU), and the pipeline backs up the database
 before migrations and rolls back the images when a deployment fails. A daily
 workflow (`drift.yml`) compares the cluster with `main`. Details, procedures
 and the target architecture: [docs/AUTOSCALING-RESILIENCE.md](docs/AUTOSCALING-RESILIENCE.md).

@@ -12,7 +12,7 @@ modifié et comment le vérifier.
 | Nœuds | 1 seul nœud (zone `africa-south1-c`) : Autopilot regroupe les pods, la contrainte de zone était en `ScheduleAnyway` donc non appliquée |
 | Metrics Server | opérationnel (`v1beta1.metrics.k8s.io` = True), `kubectl top` fonctionne |
 | HPA | backend 2–10 et frontend 2–6, CPU 70 % seulement, pas de politique de montée |
-| VPA | un seul VPA (backend), mode `Off` |
+| VPA | un seul VPA (backend), mode `Off` (passé depuis en automatique) |
 | Requests facturées | **3,75 vCPU et 6,06 GiB** réservés pour une consommation réelle de **≈ 0,05 vCPU et 0,85 GiB** |
 | Sidecar GCS FUSE | 250m CPU / 256 Mi **par pod** (valeur par défaut), soit 1 vCPU sur 4 pods pour un usage de 1m |
 | Sondes | readiness partout ; liveness manquante sur Redis, prosody, jicofo, jitsi-web, coturn ; pas de startupProbe sur PostgreSQL |
@@ -51,8 +51,8 @@ flowchart LR
 
   subgraph GKE[GKE Autopilot — africa-south1, 3 zones]
     subgraph tcid[namespace tcid — PSS restricted, NetworkPolicies]
-      FE[frontend nginx<br/>HPA 2–6 · CPU 70 % · RAM 80 %<br/>réparti sur 2 zones]
-      BE[backend Django/Daphne<br/>HPA 2–10 · CPU 70 % · RAM 80 %<br/>réparti sur 2 zones]
+      FE[frontend nginx<br/>HPA 2–6 · CPU 70 % · VPA mémoire<br/>réparti sur 2 zones]
+      BE[backend Django/Daphne<br/>HPA 2–10 · CPU 70 % · VPA mémoire<br/>réparti sur 2 zones]
       PG[(PostgreSQL StatefulSet<br/>1 pod · PVC 20 Gi)]
       RD[(Redis<br/>1 pod, éphémère)]
       CJ[CronJob sauvegarde 02:00]
@@ -61,7 +61,7 @@ flowchart LR
       JW[jitsi-web] --- PR[prosody] --- JI[jicofo] --- JVB[videobridge<br/>1 pod, non évictable]
       TU[coturn]
     end
-    VPA[[VPA « Off » sur les 9 workloads<br/>recommandations]]
+    VPA[[VPA automatique sur les 9 workloads<br/>redimensionnement en place]]
     HPA[[HPA backend / frontend]]
   end
 
@@ -85,7 +85,7 @@ flowchart LR
 | | Backend | Frontend |
 |---|---|---|
 | Min / max | 2 / 10 | 2 / 6 |
-| Cibles | CPU 70 %, mémoire 80 % des requests | CPU 70 %, mémoire 80 % |
+| Cible | CPU 70 % des requests | CPU 70 % |
 | Montée | fenêtre 60 s, au plus +2 pods ou ×2 par minute | idem |
 | Descente | fenêtre 300 s, 1 pod toutes les 2 minutes | idem |
 
@@ -93,10 +93,10 @@ flowchart LR
   oscillations.
 - Les manifests ne fixent plus `replicas` : l'HPA est le seul maître du
   nombre de pods, un déploiement ne le réinitialise plus.
-- La cible mémoire s'applique à une mémoire de request (384 Mi) bien
-  au-dessus de l'usage au repos (≈ 150 Mi). Elle ne se déclenche donc qu'en
-  cas de vraie pression, et ne bloque pas la redescente (Python ne rend pas
-  toujours sa mémoire).
+- L'HPA ne suit que le CPU : la mémoire est confiée au VPA (section 4).
+  Une cible mémoire dans l'HPA se contredirait avec un VPA qui change la
+  request mémoire, et Python ne rend pas toujours sa mémoire, ce qui
+  bloquerait la redescente.
 
 **Non scalés horizontalement, volontairement :**
 
@@ -111,15 +111,23 @@ flowchart LR
 
 ## 4. Autoscaling vertical (VPA)
 
-- Un VPA en mode **`Off`** pour chacun des 9 workloads : il observe et
-  recommande sans jamais redémarrer de pod.
-- HPA et VPA ne se contredisent pas : le VPA ne modifie rien.
-- Les recommandations sont **recopiées dans Git** (les requests actuelles en
-  viennent : backend au repos 4m / 142 Mi). Le cluster reste donc identique
-  au dépôt.
-- Le mode `Initial` (appliqué à la création d'un pod) est possible pour les
-  composants à taille fixe (PostgreSQL, Redis, prosody). Il est écarté pour
-  ne pas créer d'écart entre Git et le cluster.
+- Un VPA en mode automatique **`InPlaceOrRecreate`** pour chacun des
+  9 workloads : il observe la consommation réelle et ajuste les requests,
+  **sans redémarrer le pod** quand Kubernetes peut le redimensionner en place.
+- **Aucun conflit avec l'HPA** : chaque ressource a un seul maître. Sur le
+  backend et le frontend, l'HPA pilote le CPU et le VPA la mémoire seulement
+  (modèle « multidimensionnel »). Les autres workloads n'ont pas d'HPA : le
+  VPA pilote CPU et mémoire.
+- **Bornes** : `minAllowed` évite qu'une période creuse ne réduise trop un
+  pod (une classe peut démarrer d'un coup) ; `maxAllowed` reste sous les
+  limites du manifeste. `RequestsOnly` : les limites ne changent pas.
+- **PostgreSQL et le pont vidéo** ne sont jamais évincés par le VPA
+  (`minReplicas` par défaut à 2 pour un pod unique) : la nouvelle taille
+  s'applique en place, ou au prochain redémarrage. Une classe en cours ou la
+  base ne sont donc jamais coupées par le VPA.
+- **Git reste la référence** : le VPA modifie les pods, pas les Deployments,
+  donc le contrôle de dérive ne voit pas d'écart. Les requests du dépôt sont
+  les valeurs de départ.
 
 ```bash
 kubectl describe vpa -n tcid
