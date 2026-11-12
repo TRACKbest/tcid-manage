@@ -1,0 +1,101 @@
+# PostgreSQL in high availability, managed by the CloudNativePG operator
+# (installed once by infra/setup-gcp.sh, namespace cnpg-system).
+#
+# Two instances in two different zones: a primary that takes the writes and a
+# standby fed continuously by streaming replication. If the primary or its
+# zone fails, the operator promotes the standby and moves the "tcid-db-rw"
+# Service to it, without any manual step. Each instance has its own 10 GB
+# zonal disk (the database is a few MB).
+#
+# Services: tcid-db-rw (primary, used by the application), tcid-db-ro
+# (standbys), tcid-db-r (any instance).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: tcid-db
+  namespace: tcid
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.15
+  # Minor upgrades and configuration changes: standby first, then switchover.
+  primaryUpdateStrategy: unsupervised
+  # When the primary pod is stopped (deletion, node drain), give the clients
+  # 10 s instead of 180 s before a fast shutdown, so the standby takes over
+  # quickly (the backend's pooled connections would otherwise hold it).
+  smartShutdownTimeout: 10
+  postgresql:
+    parameters:
+      # Backend: 8 connections per pod x 10 pods max (see DB_POOL_MAX_SIZE).
+      max_connections: "100"
+    # A commit waits for the standby while it is up (no data lost on
+    # failover); if the standby is down, the primary keeps accepting writes.
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: preferred
+  # Empty database "tcid" owned by "tcid"; the password comes from
+  # Secret Manager (secret tcid-db-app, synced by the pipeline).
+  bootstrap:
+    initdb:
+      database: tcid
+      owner: tcid
+      secret:
+        name: tcid-db-app
+  storage:
+    size: 10Gi
+    storageClass: standard-rwo
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  # One instance per zone, never two in the same zone. A spread constraint
+  # rather than pod anti-affinity: on Autopilot, anti-affinity requires at
+  # least 500m CPU per pod, a spread constraint does not.
+  affinity:
+    enablePodAntiAffinity: false
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      # All the pods of the cluster, including the jobs that create a
+      # standby's disk: the disk is created in the zone of that job.
+      labelSelector:
+        matchLabels:
+          cnpg.io/cluster: tcid-db
+  # Same label as every other object of the platform.
+  inheritedMetadata:
+    labels:
+      app.kubernetes.io/part-of: tcid-center
+---
+# Who may talk to the database instances: the application pods that carry
+# db-client=true, the other instance (replication) and the operator.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tcid-db
+  namespace: tcid
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: tcid-db
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              db-client: "true"
+      ports:
+        - { port: 5432, protocol: TCP }
+    - from:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: tcid-db
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - { port: 5432, protocol: TCP }
+        - { port: 8000, protocol: TCP }

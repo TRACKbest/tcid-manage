@@ -14,7 +14,8 @@ data:
   REACT_ADMIN_URL: "/admin"
   POSTGRES_DB: "tcid"
   POSTGRES_USER: "tcid"
-  POSTGRES_HOST: "postgres"
+  # Primary of the CloudNativePG cluster (k8s/base/31-database.yaml).
+  POSTGRES_HOST: "tcid-db-rw"
   # Connections per backend pod (x 10 pods max, PostgreSQL allows 100).
   DB_POOL_MAX_SIZE: "8"
   POSTGRES_PORT: "5432"

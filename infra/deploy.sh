@@ -45,6 +45,8 @@ sync_secrets() {
   get tcid-turn-secret "$dir/meet/TURN_SECRET"
   kubectl -n tcid create secret generic tcid-secrets --from-file="$dir/app" --dry-run=client -o yaml | kubectl apply -f -
   kubectl -n tcid-meet create secret generic jitsi-secrets --from-file="$dir/meet" --dry-run=client -o yaml | kubectl apply -f -
+  kubectl -n tcid create secret generic tcid-db-app --type=kubernetes.io/basic-auth \
+    --from-literal=username=tcid --from-file=password="$dir/app/POSTGRES_PASSWORD" --dry-run=client -o yaml | kubectl apply -f -
   rm -rf "$dir"
 }
 
@@ -55,7 +57,8 @@ deploy() {
   sed -i "s/newTag: latest/newTag: $TAG/" "$overlay/k8s/overlays/prod/kustomization.yaml"
   kubectl apply -k "$overlay/k8s/overlays/prod"
   rm -rf "$overlay"
-  kubectl -n tcid rollout status statefulset/postgres --timeout=600s
+  kubectl -n tcid annotate cluster tcid-db cnpg.io/hibernation=off --overwrite
+  kubectl -n tcid wait --for=condition=Ready cluster/tcid-db --timeout=900s
 
   kubectl -n tcid delete job migrate --ignore-not-found --wait=true
   sed "s#BACKEND_IMAGE#$REGISTRY/backend:$TAG#" k8s/jobs/migrate.yaml | kubectl apply -f -

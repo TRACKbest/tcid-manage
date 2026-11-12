@@ -53,9 +53,10 @@ kubectl -n tcid scale deployment/frontend deployment/backend --replicas=0 "${dry
 step "Stopping the virtual classroom"
 kubectl -n tcid-meet scale deployment/jitsi-web deployment/jicofo deployment/jvb deployment/coturn deployment/prosody --replicas=0 "${dry[@]}"
 
-step "Stopping Redis and PostgreSQL (data stays on its disk)"
+step "Stopping Redis and PostgreSQL (data stays on its two disks)"
 kubectl -n tcid scale deployment/redis --replicas=0 "${dry[@]}"
-kubectl -n tcid scale statefulset/postgres --replicas=0 "${dry[@]}"
+# CloudNativePG hibernation: both instances stop, their disks are kept.
+kubectl -n tcid annotate cluster tcid-db cnpg.io/hibernation=on --overwrite "${dry[@]}"
 
 if [ "$deep" = 1 ]; then
   # Static IPs stay reserved, so start-tcid gets the same addresses back.
@@ -69,12 +70,14 @@ fi
 
 if [ ${#dry[@]} = 0 ]; then
   step "Waiting for every pod to stop"
-  kubectl -n tcid wait --for=delete pod -l 'app in (frontend,backend,redis,postgres)' --timeout=300s || true
+  kubectl -n tcid wait --for=delete pod -l 'app in (frontend,backend,redis)' --timeout=300s || true
+  kubectl -n tcid wait --for=delete pod -l cnpg.io/cluster=tcid-db --timeout=300s || true
   kubectl -n tcid-meet wait --for=delete pod --all --timeout=300s || true
 fi
 
 step "State"
-kubectl get deploy,statefulset -n tcid
+kubectl get deploy -n tcid
+kubectl get cluster tcid-db -n tcid
 kubectl get deploy -n tcid-meet
 echo
 echo "TCiD Center is asleep. Wake it up with: ./infra/start-tcid.sh"

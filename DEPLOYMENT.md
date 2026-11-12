@@ -10,7 +10,7 @@ Compose + Caddy) is retired; `docker-compose.yml` remains for local runs.
 |---|---|
 | Edge | Global HTTPS load balancer (static IP `tcid-ip`), Google-managed certificate, HTTP→HTTPS redirect, TLS 1.2+ policy |
 | Web | `frontend` (unprivileged nginx, React build) → `backend` (Django/Daphne ASGI), HPA 2–10 pods |
-| Data | PostgreSQL 16 StatefulSet (20 Gi persistent disk), Redis (WebSocket channel layer) |
+| Data | PostgreSQL 16 in high availability with CloudNativePG (primary + synchronous standby, one per zone, 2 × 10 Gi), Redis (WebSocket channel layer) |
 | Files | Cloud Storage bucket `tcidcenter-media` mounted through the GCS FUSE CSI driver |
 | Backups | Nightly `pg_dump` CronJob into `tcidcenter-backups` (deleted after 30 days) |
 | Classroom | Jitsi (web, prosody, jicofo) + videobridge on a UDP load balancer (`tcid-jvb-ip`, port 10000) + TURN over TCP 3478 (`tcid-turn-ip`) |

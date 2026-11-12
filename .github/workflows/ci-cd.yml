@@ -233,6 +233,9 @@ jobs:
           fetch tcid-turn-secret "$dir/meet/TURN_SECRET"
           kubectl -n tcid create secret generic tcid-secrets --from-file="$dir/app" --dry-run=client -o yaml | kubectl apply -f -
           kubectl -n tcid-meet create secret generic jitsi-secrets --from-file="$dir/meet" --dry-run=client -o yaml | kubectl apply -f -
+          # Owner of the CloudNativePG database (same password as POSTGRES_PASSWORD).
+          kubectl -n tcid create secret generic tcid-db-app --type=kubernetes.io/basic-auth \
+            --from-literal=username=tcid --from-file=password="$dir/app/POSTGRES_PASSWORD" --dry-run=client -o yaml | kubectl apply -f -
           rm -rf "$dir"
 
       # Images running before this deployment, used by the rollback step.
@@ -256,7 +259,9 @@ jobs:
             fi
           done
           kubectl apply -k .
-          kubectl -n tcid rollout status statefulset/postgres --timeout=300s
+          # Wake the database if stop-tcid.sh hibernated it, then wait for its primary.
+          kubectl -n tcid annotate cluster tcid-db cnpg.io/hibernation=off --overwrite
+          kubectl -n tcid wait --for=condition=Ready cluster/tcid-db --timeout=600s
           # The autoscalers own the web pod count: wake them up if
           # stop-tcid.sh had put the platform to sleep.
           for d in backend frontend; do

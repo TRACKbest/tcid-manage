@@ -23,6 +23,7 @@ DEPLOY_SA=tcid-deployer@${PROJECT_ID}.iam.gserviceaccount.com
 
 gcloud config set project "$PROJECT_ID" >/dev/null
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
+CNPG_VERSION=1.30.1
 step() { printf '\n==> %s\n' "$*"; }
 exists() { "$@" >/dev/null 2>&1; }
 
@@ -119,6 +120,10 @@ cluster() {
   exists gcloud container clusters describe "$CLUSTER" --location="$REGION" ||
     gcloud container clusters create-auto "$CLUSTER" --location="$REGION" --release-channel=regular
   gcloud container clusters get-credentials "$CLUSTER" --location="$REGION"
+
+  step "CloudNativePG operator $CNPG_VERSION (PostgreSQL in high availability, k8s/base/31-database.yaml)"
+  kubectl apply --server-side -f "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v$CNPG_VERSION/cnpg-$CNPG_VERSION.yaml"
+  kubectl -n cnpg-system rollout status deployment/cnpg-controller-manager --timeout=600s
 }
 
 workload() {

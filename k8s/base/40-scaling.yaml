@@ -9,8 +9,9 @@
 #   the HPA owns CPU and the VPA owns memory only (multidimensional pattern);
 #   the other workloads have no HPA and get both. Limits stay those of the
 #   manifests (RequestsOnly), and maxAllowed keeps every request under them.
-# - PostgreSQL and the videobridge keep minReplicas 2 (VPA default): VPA never
-#   evicts their single pod; new sizes apply in place or at the next restart.
+# - The videobridge keeps minReplicas 2 (VPA default): VPA never evicts its
+#   single pod; new sizes apply in place or at the next restart. PostgreSQL has
+#   no VPA: its pods belong to the CloudNativePG operator (31-database.yaml).
 # - PDB: node upgrades always keep one backend and one frontend pod.
 # Redis (in-memory channel layer) and the videobridge (a conference is pinned
 # to its bridge, behind one UDP address) are deliberately not scaled out.
@@ -123,25 +124,6 @@ spec:
         maxAllowed: { memory: 128Mi }
       - containerName: gke-gcsfuse-sidecar
         mode: "Off"
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: postgres
-  namespace: tcid
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: StatefulSet
-    name: postgres
-  updatePolicy:
-    updateMode: InPlaceOrRecreate
-  resourcePolicy:
-    containerPolicies:
-      - containerName: postgres
-        controlledValues: RequestsOnly
-        minAllowed: { cpu: 100m, memory: 128Mi }
-        maxAllowed: { cpu: "1", memory: 1Gi }
 ---
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler

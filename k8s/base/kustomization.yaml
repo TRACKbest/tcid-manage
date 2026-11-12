@@ -6,6 +6,7 @@ resources:
   - 20-backend.yaml
   - 21-frontend.yaml
   - 30-data.yaml
+  - 31-database.yaml
   - 40-scaling.yaml
   - 50-ingress.yaml
   - 60-jitsi.yaml

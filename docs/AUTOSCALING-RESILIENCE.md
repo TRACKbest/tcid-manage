@@ -53,7 +53,7 @@ flowchart LR
     subgraph tcid[namespace tcid — PSS restricted, NetworkPolicies]
       FE[frontend nginx<br/>HPA 2–6 · CPU 70 % · VPA mémoire<br/>réparti sur 2 zones]
       BE[backend Django/Daphne<br/>HPA 2–10 · CPU 70 % · VPA mémoire<br/>réparti sur 2 zones]
-      PG[(PostgreSQL StatefulSet<br/>1 pod · PVC 20 Gi)]
+      PG[(PostgreSQL CloudNativePG<br/>primaire + réplique synchrone<br/>1 par zone · 2 × 10 Gi)]
       RD[(Redis<br/>1 pod, éphémère)]
       CJ[CronJob sauvegarde 02:00]
     end
@@ -103,6 +103,8 @@ flowchart LR
 - **Redis** : couche de messages WebSocket en mémoire. Plusieurs instances
   sans Sentinel/Cluster casseraient la diffusion des messages.
 - **PostgreSQL** : une base n'est pas « scalable » par réplicas identiques.
+  Elle est rendue hautement disponible autrement : un primaire et une
+  réplique alimentée en continu, gérés par CloudNativePG (section 6).
 - **JVB** : une conférence est rattachée à un bridge, qui annonce une seule
   IP publique. Passer à plusieurs bridges demande un StatefulSet avec une IP
   et un load balancer UDP par bridge (Octo/relay). C'est une évolution
@@ -121,10 +123,11 @@ flowchart LR
 - **Bornes** : `minAllowed` évite qu'une période creuse ne réduise trop un
   pod (une classe peut démarrer d'un coup) ; `maxAllowed` reste sous les
   limites du manifeste. `RequestsOnly` : les limites ne changent pas.
-- **PostgreSQL et le pont vidéo** ne sont jamais évincés par le VPA
-  (`minReplicas` par défaut à 2 pour un pod unique) : la nouvelle taille
-  s'applique en place, ou au prochain redémarrage. Une classe en cours ou la
-  base ne sont donc jamais coupées par le VPA.
+- **Le pont vidéo** n'est jamais évincé par le VPA (`minReplicas` par défaut
+  à 2 pour un pod unique) : la nouvelle taille s'applique en place, ou au
+  prochain redémarrage. Une classe en cours n'est donc jamais coupée par le
+  VPA. **PostgreSQL n'a pas de VPA** : ses pods appartiennent à l'opérateur
+  CloudNativePG, qui gère lui-même leurs redémarrages.
 - **Git reste la référence** : le VPA modifie les pods, pas les Deployments,
   donc le contrôle de dérive ne voit pas d'écart. Les requests du dépôt sont
   les valeurs de départ.
@@ -159,15 +162,15 @@ ajustements Autopilot et l'injection du sidecar GCS FUSE.
 | Mécanisme | Où | Effet |
 |---|---|---|
 | ReplicaSet / StatefulSet | tous les workloads | un pod supprimé ou un nœud perdu est recréé automatiquement |
-| startupProbe | backend (2 min), PostgreSQL (5 min de récupération), prosody, jicofo | pas de redémarrage pendant un démarrage lent |
+| startupProbe | backend (2 min), PostgreSQL (géré par CloudNativePG), prosody, jicofo | pas de redémarrage pendant un démarrage lent |
 | livenessProbe | tous les conteneurs | redémarrage d'un conteneur bloqué. jicofo est en TCP seulement : son `/about/health` échoue aussi si le bridge tombe, et le redémarrer ne réparerait rien |
 | readinessProbe | tous | un pod non prêt sort du load balancer (`/api/readyz/` teste la base) |
 | Rolling update | backend, frontend | `maxSurge 1`, `maxUnavailable 0`, `progressDeadlineSeconds 600` |
-| Arrêt propre | frontend (preStop 15 s, grâce 45 s), backend (5 s), PostgreSQL (grâce 60 s) | pas de requête coupée, checkpoint au lieu d'une récupération après crash |
-| PodDisruptionBudget | backend, frontend | une mise à jour de nœud garde toujours un pod |
-| Répartition | backend, frontend : zones en `DoNotSchedule`, nœuds en `ScheduleAnyway` | les 2 réplicas sont dans 2 zones différentes |
+| Arrêt propre | frontend (preStop 15 s, grâce 45 s), backend (5 s), PostgreSQL (10 s laissées aux clients, puis arrêt rapide et bascule) | pas de requête coupée |
+| PodDisruptionBudget | backend, frontend, primaire PostgreSQL (créé par l'opérateur) | une mise à jour de nœud garde toujours un pod ; le primaire est d'abord basculé |
+| Répartition | backend, frontend : zones et nœuds en `ScheduleAnyway` (quota) + rééquilibrage par `start-tcid.sh` ; PostgreSQL : zones en `DoNotSchedule` | 1 pod web et 1 instance de base par zone |
 | Non évictable | JVB (`safe-to-evict: false`) | Autopilot ne coupe pas une classe en cours pour compacter les nœuds |
-| Persistance | PVC `data-postgres-0` | le pod PostgreSQL recréé retrouve le même disque. L'auto-healing relance le service, il ne réplique pas les données |
+| Persistance | PVC `tcid-db-1` et `tcid-db-2` (un par zone, `Retain`) | chaque instance retrouve son disque ; la réplication garde une copie à jour dans l'autre zone |
 
 Sur Autopilot, la répartition sur plusieurs zones ne coûte rien de plus : la
 facturation se fait par pod, pas par nœud.
@@ -177,7 +180,7 @@ Test de résilience :
 ```bash
 kubectl -n tcid delete pod -l app=backend --wait=false   # recréés en ~30 s
 kubectl -n tcid get pods -w
-kubectl -n tcid delete pod postgres-0                    # même PVC, mêmes données
+./infra/ha-check.sh --db-failover                        # suppression du primaire : la réplique prend le relais
 kubectl -n tcid exec deploy/backend -c backend -- python manage.py shell -c "from django.contrib.auth.models import User; print(User.objects.count())"
 ```
 
@@ -185,17 +188,28 @@ kubectl -n tcid exec deploy/backend -c backend -- python manage.py shell -c "fro
 
 - **Fait** : backend et frontend multi-zones, ≥ 2 réplicas, PDB, cluster
   régional (plan de contrôle répliqué par Google).
-- **PostgreSQL n'est pas hautement disponible** : un pod, un disque zonal.
-  Une panne de zone l'arrête jusqu'au retour de la zone. Le RPO est d'au
-  plus 24 h via les dumps, et 0 tant que le disque survit. Options classées :
-  1. **Disque régional** (`pd-balanced` répliqué de façon synchrone sur
-     2 zones) : le pod redémarre dans l'autre zone avec les données (RPO 0,
-     RTO de quelques minutes). Coût : disque ×2. Demande une migration
-     (dump, nouveau PVC, restauration) avec une courte interruption.
-  2. **CloudNativePG** (opérateur, 1 primaire et 1 réplique, bascule
-     automatique) : vraie HA dans Kubernetes, au prix de pods en plus.
-  3. **Cloud SQL HA** : géré par Google, la solution la plus simple à
-     exploiter, mais la plus chère.
+- **PostgreSQL hautement disponible (CloudNativePG 1.30, 12/11/2026)** :
+  `k8s/base/31-database.yaml`. Deux instances PostgreSQL 16.15, une par zone
+  (contrainte de répartition `DoNotSchedule` ; l'anti-affinité est évitée car
+  Autopilot exige alors 500m de CPU par pod), chacune sur son disque de
+  10 Gi. Le primaire envoie chaque écriture à la réplique (réplication
+  synchrone `dataDurability: preferred` : aucune transaction validée n'est
+  perdue lors d'une bascule tant que la réplique est en ligne, et le primaire
+  continue seul si elle tombe). Si le primaire ou sa zone disparaît,
+  l'opérateur promeut la réplique et déplace le service `tcid-db-rw` : pas
+  d'intervention manuelle.
+  - **Migration** : sauvegarde, écritures gelées (backend à 0, ~3 min),
+    `pg_dump | pg_restore` vers le nouveau cluster, comparaison des 41 tables
+    (316 lignes, identiques), bascule du backend. L'ancien StatefulSet est à
+    0 et son disque de 20 Gi est conservé (`Retain`) pour un retour arrière.
+  - **Mesuré** : deux bascules (zone c → b, puis b → c) en ~20 s, 1 requête
+    en échec sur 79, données identiques après chaque bascule.
+  - **Limite** : 2 zones et non 3. Le quota `SSD_TOTAL_GB` (250 Go) et
+    `IN_USE_ADDRESSES` (4) limitent le projet à 2 nœuds. Les sauvegardes
+    quotidiennes restent le dernier recours (RPO 24 h).
+  - **Arrêt/démarrage** : `stop-tcid.sh` met le cluster en hibernation
+    (`cnpg.io/hibernation=on`, disques conservés), `start-tcid.sh` et le
+    pipeline le réveillent.
 - **Redis** : pas de réplication, les données sont éphémères (messages
   WebSocket). Un redémarrage coupe les WebSockets, qui se reconnectent.
 

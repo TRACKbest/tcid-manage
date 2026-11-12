@@ -42,7 +42,7 @@ jobs:
       - name: Diff manifests against the cluster
         working-directory: k8s/overlays/prod
         run: |
-          if [ "$(kubectl -n tcid get statefulset postgres -o jsonpath='{.spec.replicas}')" = 0 ]; then
+          if [ "$(kubectl -n tcid get cluster tcid-db -o jsonpath='{.metadata.annotations.cnpg\.io/hibernation}')" = on ]; then
             echo "Platform asleep (stop-tcid.sh): replica counts differ on purpose, nothing to compare."
             exit 0
           fi

@@ -47,23 +47,6 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: postgres-from-db-clients
-  namespace: tcid
-spec:
-  podSelector:
-    matchLabels:
-      app: postgres
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              db-client: "true"
-      ports:
-        - { port: 5432, protocol: TCP }
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
   name: redis-from-backend
   namespace: tcid
 spec:
