@@ -322,6 +322,28 @@ jobs:
             exit 1
           fi
 
+      # Autopilot packs the new pods onto as few nodes as possible, often all in
+      # one zone. A rolling restart (PDBs keep a pod serving) spreads them so
+      # each web tier has a pod in each zone of the database instances. Never
+      # fails the deployment: the site already passed the smoke tests.
+      - name: Spread web pods over two zones
+        run: |
+          zones_of() {  # <app>: number of zones holding its running pods
+            nodes=$(kubectl -n tcid get pods -l "app=$1" --field-selector=status.phase=Running -o jsonpath='{.items[*].spec.nodeName}')
+            [ -n "$nodes" ] || { echo 0; return; }
+            kubectl get nodes $nodes -o jsonpath='{range .items[*]}{.metadata.labels.topology\.kubernetes\.io/zone}{"\n"}{end}' | sort -u | grep -c .
+          }
+          node_zones=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.labels.topology\.kubernetes\.io/zone}{"\n"}{end}' | sort -u | grep -c .) || node_zones=0
+          for d in backend frontend; do
+            z=$(zones_of "$d") || z=0
+            echo "$d: pods in $z zone(s), nodes in $node_zones zone(s)"
+            if [ "$node_zones" -ge 2 ] && [ "$z" -lt 2 ]; then
+              kubectl -n tcid rollout restart "deployment/$d"
+              kubectl -n tcid rollout status "deployment/$d" --timeout=300s || echo "::warning::$d could not be spread over two zones"
+            fi
+          done
+          kubectl get pods -n tcid -l 'app in (backend,frontend)' -o wide
+
       # Any failure after the new manifests were applied puts the previous
       # images back. Migrations are not reverted: they must stay compatible
       # with the previous version (add columns, never drop them in one step).
