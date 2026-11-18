@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from . import models
 
-
+#code referrence
 REFERENCE_PATTERN = re.compile(r'^[A-Z0-9.\-_/]{4,64}$')
 
 
